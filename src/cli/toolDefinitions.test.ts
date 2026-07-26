@@ -184,6 +184,23 @@ describe('createToolDefinitions', () => {
     })
   })
 
+  it('previewEdit requires mode-specific fields', () => {
+    const def = getDefinition('previewEdit')
+
+    expect(
+      def.inputSchema.safeParse({
+        mode: 'create',
+        projectUrl: 'https://scrapbox.io/shokai',
+      }).success,
+    ).toBe(false)
+    expect(
+      def.inputSchema.safeParse({
+        mode: 'update',
+        projectUrl: 'https://scrapbox.io/shokai',
+      }).success,
+    ).toBe(false)
+  })
+
   it('previewEdit rejects an ops array beyond the configured max', () => {
     const def = getDefinition('previewEdit')
     const lineId = 'c'.repeat(24)

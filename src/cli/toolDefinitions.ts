@@ -320,19 +320,53 @@ export function createToolDefinitions(env: Env): AnyToolDefinition[] {
     }),
   ]
 
-  const previewEditInputSchema = z.discriminatedUnion('mode', [
-    z.object({
-      mode: z.literal('update'),
+  // MCP SDKはtools/listでトップレベルのZod objectだけをJSON Schema化する。
+  // discriminatedUnionを直接渡すと空objectとして公開されるため、fieldはobjectで
+  // 宣言し、modeごとの必須条件をsuperRefineで検証する。
+  const previewEditOpsSchema = opsSchema(env.limits.maxPreviewEditOps)
+  const previewEditInputSchema = z
+    .object({
+      mode: z
+        .enum(['update', 'create'])
+        .describe('update: 既存ページ編集、create: 新規ページ作成'),
       projectUrl,
-      pageId: pageIdSchema,
-      ops: opsSchema(env.limits.maxPreviewEditOps),
-    }),
-    z.object({
-      mode: z.literal('create'),
-      projectUrl,
-      body: z.string().min(1).max(CREATE_BODY_MAX_LENGTH),
-    }),
-  ])
+      pageId: pageIdSchema
+        .optional()
+        .describe('updateモードで必須。readPageで取得したページID'),
+      ops: previewEditOpsSchema
+        .optional()
+        .describe('updateモードで必須。既存ページへ適用する編集操作'),
+      body: z
+        .string()
+        .min(1)
+        .max(CREATE_BODY_MAX_LENGTH)
+        .optional()
+        .describe('createモードで必須。1行目をページタイトルとする本文'),
+    })
+    .superRefine((input, ctx) => {
+      if (input.mode === 'update') {
+        if (input.pageId === undefined) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['pageId'],
+            message: 'pageId is required in update mode',
+          })
+        }
+        if (input.ops === undefined) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['ops'],
+            message: 'ops is required in update mode',
+          })
+        }
+      } else if (input.body === undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['body'],
+          message: 'body is required in create mode',
+        })
+      }
+    })
   type PreviewEditInput = z.infer<typeof previewEditInputSchema>
 
   const previewEdit = defineTool<PreviewEditInput>({
@@ -346,8 +380,8 @@ export function createToolDefinitions(env: Env): AnyToolDefinition[] {
       if (input.mode === 'update') {
         return {
           command: 'previewEdit',
-          args: [input.projectUrl, input.pageId],
-          stdin: JSON.stringify({ ops: input.ops.ops }),
+          args: [input.projectUrl, input.pageId!],
+          stdin: JSON.stringify({ ops: input.ops!.ops }),
         }
       }
       return {

@@ -431,11 +431,108 @@ describe('OAuth + MCP integration', () => {
       method: 'tools/list',
     })
     expect(list.status).toBe(200)
-    const toolNames = list.json.result.tools.map(
-      (tool: { name: string }) => tool.name,
+    const expectedToolSchemas: Record<
+      string,
+      { properties: string[]; required: string[] }
+    > = {
+      guide: { properties: ['topic'], required: ['topic'] },
+      help: { properties: ['command'], required: ['command'] },
+      whoami: { properties: ['origin'], required: ['origin'] },
+      listProjects: { properties: ['origin'], required: ['origin'] },
+      browsePage: { properties: ['pageUrl'], required: ['pageUrl'] },
+      browsePageChanges: {
+        properties: ['projectUrl', 'pageId', 'since'],
+        required: ['projectUrl', 'pageId'],
+      },
+      browseRelatedPages: {
+        properties: ['pageUrl'],
+        required: ['pageUrl'],
+      },
+      readPage: { properties: ['pageUrl'], required: ['pageUrl'] },
+      readFileInfo: {
+        properties: ['fileUrl', 'project'],
+        required: ['fileUrl'],
+      },
+      downloadFile: {
+        properties: ['fileUrl', 'project', 'thumbnail'],
+        required: ['fileUrl'],
+      },
+      readProjectMembers: {
+        properties: ['projectUrl'],
+        required: ['projectUrl'],
+      },
+      listPages: {
+        properties: ['projectUrl', 'sort', 'limit', 'skip', 'filter'],
+        required: ['projectUrl'],
+      },
+      list1hopLinks: { properties: ['pageUrl'], required: ['pageUrl'] },
+      list2hopLinks: { properties: ['pageUrl'], required: ['pageUrl'] },
+      searchVector: {
+        properties: ['projectUrl', 'query'],
+        required: ['projectUrl', 'query'],
+      },
+      searchFullText: {
+        properties: ['projectUrl', 'query', 'or', 'sort'],
+        required: ['projectUrl', 'query'],
+      },
+      search1hopLinks: {
+        properties: ['pageUrl', 'query', 'or'],
+        required: ['pageUrl', 'query'],
+      },
+      search2hopLinks: {
+        properties: ['pageUrl', 'query', 'or'],
+        required: ['pageUrl', 'query'],
+      },
+      previewEdit: {
+        properties: ['mode', 'projectUrl', 'pageId', 'ops', 'body'],
+        required: ['mode', 'projectUrl'],
+      },
+      submitEdit: {
+        properties: ['projectUrl', 'previewId'],
+        required: ['projectUrl', 'previewId'],
+      },
+    }
+    const tools = list.json.result.tools as Array<{
+      name: string
+      inputSchema: {
+        type?: string
+        properties?: Record<string, unknown>
+        required?: string[]
+      }
+    }>
+    expect(tools.map((tool) => tool.name).sort()).toEqual(
+      Object.keys(expectedToolSchemas).sort(),
     )
-    expect(toolNames).toContain('browsePage')
-    expect(toolNames).toContain('previewEdit')
+    for (const tool of tools) {
+      const expected = expectedToolSchemas[tool.name]
+      if (expected === undefined) {
+        throw new Error(`unexpected tool: ${tool.name}`)
+      }
+      expect(tool.inputSchema.type, tool.name).toBe('object')
+      expect(
+        Object.keys(tool.inputSchema.properties ?? {}).sort(),
+        tool.name,
+      ).toEqual(expected.properties.slice().sort())
+      expect((tool.inputSchema.required ?? []).sort(), tool.name).toEqual(
+        expected.required.slice().sort(),
+      )
+    }
+
+    const previewEditTool = tools.find((tool) => tool.name === 'previewEdit')
+    expect(previewEditTool?.inputSchema.properties?.['mode']).toMatchObject({
+      type: 'string',
+      enum: ['update', 'create'],
+    })
+    expect(previewEditTool?.inputSchema.properties?.['ops']).toMatchObject({
+      type: 'object',
+      properties: {
+        ops: {
+          type: 'array',
+          items: { anyOf: expect.any(Array) },
+        },
+      },
+      required: ['ops'],
+    })
 
     const call = await callMcp(accessToken, {
       jsonrpc: '2.0',

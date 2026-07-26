@@ -48,6 +48,15 @@ vi.mock('node:child_process', () => ({
         }
         return
       }
+      if (command === 'listProjects') {
+        // 上流CLIが401時に実際に出す文面(末尾のlogin誘導を含む)
+        child.stdout.end('')
+        child.stderr.end(
+          'HTTP 401 Unauthorized\nhttps://scrapbox.io/api/projects\n\n\nRun `cosense login https://scrapbox.io` to authenticate.',
+        )
+        child.emit('close', 1)
+        return
+      }
       if (command === 'browsePage') {
         child.stdout.end('# Test Page\n\n## 本文\nhello world')
         child.stderr.end('')
@@ -410,6 +419,102 @@ describe('OAuth + MCP integration', () => {
     expect(call.status).toBe(200)
     expect(call.json.result.isError).toBe(true)
     expect(call.json.result.content[0].text).toContain('forbidden')
+  })
+
+  it('serves the skill entry point as initialize instructions', async () => {
+    const accessToken = await getAccessToken('cosense:read')
+
+    const init = await callMcp(accessToken, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: {
+        protocolVersion: '2025-06-18',
+        capabilities: {},
+        clientInfo: { name: 'integration-test', version: '0.0.0' },
+      },
+    })
+    expect(init.status).toBe(200)
+    expect(init.json.result.instructions).toContain('cosense-cli-mcp')
+    expect(init.json.result.instructions).toContain('Cosense Skill 手順書')
+  })
+
+  /**
+   * スキルとhelpはCLIを起動せず生成済みテキストを返すので、scopeもPATも要らない。
+   * 認証情報が壊れている時に login.md を読めないと、復旧の導線が無くなる。
+   */
+  it('serves guide and help without a cosense:write scope', async () => {
+    const accessToken = await getAccessToken('cosense:read')
+
+    await callMcp(accessToken, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: {
+        protocolVersion: '2025-06-18',
+        capabilities: {},
+        clientInfo: { name: 'integration-test', version: '0.0.0' },
+      },
+    })
+
+    const list = await callMcp(accessToken, {
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'tools/list',
+    })
+    const toolNames = list.json.result.tools.map(
+      (tool: { name: string }) => tool.name,
+    )
+    expect(toolNames).toContain('guide')
+    expect(toolNames).toContain('help')
+
+    const guide = await callMcp(accessToken, {
+      jsonrpc: '2.0',
+      id: 3,
+      method: 'tools/call',
+      params: { name: 'guide', arguments: { topic: 'login.md' } },
+    })
+    expect(guide.json.result.isError).toBeFalsy()
+    expect(guide.json.result.content[0].text).toContain('OAuth')
+
+    const help = await callMcp(accessToken, {
+      jsonrpc: '2.0',
+      id: 4,
+      method: 'tools/call',
+      params: { name: 'help', arguments: { command: 'previewEdit' } },
+    })
+    expect(help.json.result.isError).toBeFalsy()
+    expect(help.json.result.content[0].text).toContain('Usage:')
+  })
+
+  it('rewrites the CLI login instruction in tool errors', async () => {
+    const accessToken = await getAccessToken('cosense:read')
+
+    await callMcp(accessToken, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: {
+        protocolVersion: '2025-06-18',
+        capabilities: {},
+        clientInfo: { name: 'integration-test', version: '0.0.0' },
+      },
+    })
+
+    const call = await callMcp(accessToken, {
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'tools/call',
+      params: {
+        name: 'listProjects',
+        arguments: { origin: 'https://scrapbox.io' },
+      },
+    })
+    expect(call.json.result.isError).toBe(true)
+    const text = call.json.result.content[0].text as string
+    expect(text).toContain('HTTP 401 Unauthorized')
+    expect(text).not.toContain('Run `cosense login')
+    expect(text).toContain('再認可')
   })
 
   it('rejects /mcp requests without a bearer token', async () => {

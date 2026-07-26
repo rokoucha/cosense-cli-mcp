@@ -34,6 +34,24 @@ docker run -p 3000:3000 \
   ghcr.io/rokoucha/cosense-cli-mcp:latest
 ```
 
+## 上流のAgent Skillについて
+
+CLIに同梱されているAgent Skillと各コマンドの`--help`を、MCPの`guide`/`help` toolとして配ります。
+どちらも`@helpfeel/cosense-cli`のexact versionから決まる決定的なテキストなので、実行時ではなくビルド時に固定します。
+
+- スキル: `https://github.com/helpfeel/cosense-cli` の `v<CLIのversion>` タグから取得
+- help: インストール済みCLIバイナリから生成
+- 生成物は`src/generated/`に出力し、コミットしません。CLIのversionが変われば自動的に取り直します
+
+`login.md`と`version-mismatch.md`だけはこのサーバー向けに差し替えています(認証はOAuthで行うためCLIの`login`は使えない)。
+コマンドごとの読み替え表は持ちません。tool名はCLIのコマンド名と同じで、引数の形はinput schemaが持っているので、読み替えはAIに任せます。
+
+手動で取り直したい時:
+
+```bash
+pnpm run contract --force
+```
+
 ## License
 
 Copyright (c) 2026 Rokoucha

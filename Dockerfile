@@ -11,6 +11,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
 
 FROM fetch AS build
 COPY package.json tsconfig.json ./
+COPY scripts ./scripts
 COPY src ./src
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm install --offline --frozen-lockfile && pnpm run build

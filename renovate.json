@@ -7,6 +7,13 @@
   ],
   "automerge": true,
   "automergeType": "branch",
+  "packageRules": [
+    {
+      "description": "上流のAgent Skillをこのversionのタグから取り込んでAIへの指示として配るため、更新内容を人が見てからマージする",
+      "matchPackageNames": ["@helpfeel/cosense-cli"],
+      "automerge": false
+    }
+  ],
   "lockFileMaintenance": {
     "enabled": true
   },

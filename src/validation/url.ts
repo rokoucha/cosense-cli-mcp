@@ -47,6 +47,9 @@ export function originSchema(allowedOrigin: string) {
       }
       return url.origin
     })
+    .describe(
+      `Cosenseのorigin。このサーバーが許可するのは ${allowedOrigin} のみ (path/query/hash不可)`,
+    )
 }
 
 /**
@@ -81,6 +84,9 @@ export function projectUrlSchema(allowedOrigin: string) {
       }
       return `${url.origin}${url.pathname}`
     })
+    .describe(
+      `projectのURL。形式は ${allowedOrigin}/<projectName> (query/hash不可)`,
+    )
 }
 
 /**
@@ -122,6 +128,9 @@ export function pageUrlSchema(allowedOrigin: string) {
       }
       return `${url.origin}${url.pathname}${url.hash}`
     })
+    .describe(
+      `ページのURL。形式は ${allowedOrigin}/<projectName>/<pageTitle> (末尾に #<lineId> を付けてもよい。query不可)`,
+    )
 }
 
 /**
@@ -156,4 +165,7 @@ export function fileUrlSchema(allowedOrigin: string) {
       }
       return `${url.origin}${url.pathname}`
     })
+    .describe(
+      `ファイルのURL。形式は ${allowedOrigin}/files/<fileId>[.<ext>] (query/hash不可)`,
+    )
 }

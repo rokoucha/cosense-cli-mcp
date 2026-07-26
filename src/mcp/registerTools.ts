@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import type { AnyToolDefinition } from '../cli/toolDefinitions.js'
+import { rewriteCliGuidance } from '../cli/cliMessage.js'
 import type { CliExecutor } from '../cli/executor.js'
 import type { Env } from '../config/env.js'
 import { logCliCommand } from '../http/logging.js'
@@ -87,7 +88,7 @@ export function registerTools(
             ? 'timeout'
             : `exit code ${result.exitCode ?? 'unknown'}`
           return errorResult(
-            `command "${definition.name}" failed (${reason})\n${redact(result.stderr, [pat])}`,
+            `command "${definition.name}" failed (${reason})\n${rewriteCliGuidance(redact(result.stderr, [pat]))}`,
           )
         }
 

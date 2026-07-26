@@ -4,6 +4,8 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { CliExecutor } from '../cli/executor.js'
 import { createToolDefinitions } from '../cli/toolDefinitions.js'
 import type { Env } from '../config/env.js'
+import { buildInstructions } from '../guidance/index.js'
+import { registerGuidance } from './registerGuidance.js'
 import { registerTools } from './registerTools.js'
 
 function readOwnPackageVersion(): string {
@@ -13,12 +15,16 @@ function readOwnPackageVersion(): string {
 }
 
 export function createMcpServer(env: Env, executor: CliExecutor): McpServer {
-  const server = new McpServer({
-    name: 'cosense-cli-mcp',
-    version: readOwnPackageVersion(),
-  })
+  const server = new McpServer(
+    {
+      name: 'cosense-cli-mcp',
+      version: readOwnPackageVersion(),
+    },
+    { instructions: buildInstructions() },
+  )
   const definitions = createToolDefinitions(env)
   registerTools(server, definitions, executor, env)
+  registerGuidance(server)
   return server
 }
 

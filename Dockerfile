@@ -10,7 +10,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm fetch
 
 FROM fetch AS build
-COPY package.json tsconfig.json ./
+COPY package.json tsconfig.json tsconfig.build.json ./
 COPY scripts ./scripts
 COPY src ./src
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \

@@ -36,7 +36,8 @@ function createFakeChild(): FakeChild {
   return child
 }
 
-const { CliExecutor } = await import('./executor.js')
+const { CliAbortedError, CliExecutor, CliStdinTooLargeError } =
+  await import('./executor.js')
 
 describe('CliExecutor', () => {
   beforeEach(() => {
@@ -56,6 +57,7 @@ describe('CliExecutor', () => {
       args: ['https://scrapbox.io'],
       pat: 'fake-pat',
       timeoutMs: 5000,
+      maxStdinBytes: 1024 * 1024,
       maxStdoutBytes: 1024,
       maxStderrBytes: 1024,
     })
@@ -91,6 +93,7 @@ describe('CliExecutor', () => {
       args: ['https://scrapbox.io/shokai/foo'],
       pat: 'fake-pat',
       timeoutMs: 5000,
+      maxStdinBytes: 1024 * 1024,
       maxStdoutBytes: 1024,
       maxStderrBytes: 1024,
     })
@@ -115,6 +118,7 @@ describe('CliExecutor', () => {
       args: ['https://scrapbox.io/shokai'],
       pat: 'fake-pat',
       timeoutMs: 5000,
+      maxStdinBytes: 1024 * 1024,
       maxStdoutBytes: 5,
       maxStderrBytes: 1024,
     })
@@ -141,6 +145,7 @@ describe('CliExecutor', () => {
       stdin: '{"ops":[]}',
       pat: 'fake-pat',
       timeoutMs: 5000,
+      maxStdinBytes: 1024 * 1024,
       maxStdoutBytes: 1024,
       maxStderrBytes: 1024,
     })
@@ -164,6 +169,7 @@ describe('CliExecutor', () => {
       args: ['https://scrapbox.io/shokai/foo'],
       pat: 'fake-pat',
       timeoutMs: 20,
+      maxStdinBytes: 1024 * 1024,
       maxStdoutBytes: 1024,
       maxStderrBytes: 1024,
     })
@@ -188,6 +194,7 @@ describe('CliExecutor', () => {
       args: ['https://scrapbox.io/shokai/foo'],
       pat: 'fake-pat',
       timeoutMs: 5000,
+      maxStdinBytes: 1024 * 1024,
       maxStdoutBytes: 1024,
       maxStderrBytes: 1024,
     })
@@ -209,6 +216,7 @@ describe('CliExecutor', () => {
       args: ['https://scrapbox.io'],
       pat: 'fake-pat',
       timeoutMs: 5000,
+      maxStdinBytes: 1024 * 1024,
       maxStdoutBytes: 1024,
       maxStderrBytes: 1024,
     }
@@ -236,5 +244,84 @@ describe('CliExecutor', () => {
     children[2]!.stderr.end('')
     children[2]!.emit('close', 0)
     await Promise.all([p2, p3])
+  })
+
+  it('does not spawn when the signal is already aborted', async () => {
+    spawnMock.mockReturnValue(createFakeChild())
+
+    const controller = new AbortController()
+    controller.abort()
+
+    const executor = new CliExecutor(4)
+    await expect(
+      executor.execute({
+        command: 'whoami',
+        args: ['https://scrapbox.io'],
+        pat: 'fake-pat',
+        timeoutMs: 5000,
+        maxStdinBytes: 1024 * 1024,
+        maxStdoutBytes: 1024,
+        maxStderrBytes: 1024,
+        signal: controller.signal,
+      }),
+    ).rejects.toBeInstanceOf(CliAbortedError)
+
+    expect(spawnMock).not.toHaveBeenCalled()
+  })
+
+  it('does not spawn a request that was aborted while queued', async () => {
+    const child = createFakeChild()
+    spawnMock.mockReturnValue(child)
+
+    const executor = new CliExecutor(1)
+    const request = {
+      command: 'whoami' as const,
+      args: ['https://scrapbox.io'],
+      pat: 'fake-pat',
+      timeoutMs: 5000,
+      maxStdinBytes: 1024 * 1024,
+      maxStdoutBytes: 1024,
+      maxStderrBytes: 1024,
+    }
+
+    const running = executor.execute(request)
+    const controller = new AbortController()
+    const queued = executor.execute({ ...request, signal: controller.signal })
+
+    await nextTick()
+    expect(spawnMock).toHaveBeenCalledTimes(1)
+
+    // 順番待ちの間に切断される。listenerを張る前のabortなので、signalの状態を
+    // 直接見ないと後からspawnされてしまう。
+    controller.abort()
+
+    child.stdout.end('')
+    child.stderr.end('')
+    child.emit('close', 0)
+    await running
+
+    await expect(queued).rejects.toBeInstanceOf(CliAbortedError)
+    expect(spawnMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects stdin larger than the configured limit without spawning', async () => {
+    spawnMock.mockReturnValue(createFakeChild())
+
+    const executor = new CliExecutor(4)
+    await expect(
+      executor.execute({
+        command: 'previewEdit',
+        args: ['https://scrapbox.io/shokai', 'a'.repeat(24)],
+        stdin: 'あ'.repeat(10),
+        pat: 'fake-pat',
+        timeoutMs: 5000,
+        // UTF-8で1文字3byteなので30byte。byte数で判定している事を確かめる。
+        maxStdinBytes: 20,
+        maxStdoutBytes: 1024,
+        maxStderrBytes: 1024,
+      }),
+    ).rejects.toBeInstanceOf(CliStdinTooLargeError)
+
+    expect(spawnMock).not.toHaveBeenCalled()
   })
 })

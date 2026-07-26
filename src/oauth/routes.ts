@@ -28,8 +28,8 @@ import {
   buildProtectedResourceMetadata,
 } from './metadata.js'
 import { computeS256Challenge } from './pkce.js'
+import { ALL_SCOPES } from './scopes.js'
 
-const ALL_SCOPES = ['cosense:read', 'cosense:write', 'offline_access'] as const
 const CSRF_COOKIE_NAME = 'cosense_mcp_csrf'
 
 function parseScope(raw: string): string[] {
@@ -310,6 +310,7 @@ export function createOAuthRouter(env: Env, executor: CliExecutor): Router {
           args: [env.allowedOrigin],
           pat,
           timeoutMs: env.cli.timeoutMs,
+          maxStdinBytes: env.cli.maxStdinBytes,
           maxStdoutBytes: env.cli.maxStdoutBytes,
           maxStderrBytes: env.cli.maxStderrBytes,
         })

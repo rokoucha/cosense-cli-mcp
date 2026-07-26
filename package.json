@@ -1,5 +1,7 @@
 {
   "name": "cosense-cli-mcp",
+  "version": "0.1.0",
+  "private": true,
   "packageManager": "pnpm@11.17.0+sha512.cca3cea332ad254bb84145f966d19f4879615210346fc92c79a047f23a0d7b3cca3c3792f0076ba1f1831d277efbcf0a9119b31a9a60eca7fb3d6231f331ef72",
   "type": "module",
   "dependencies": {
@@ -18,13 +20,13 @@
     "vitest": "4.1.10"
   },
   "scripts": {
-    "build": "pnpm run contract && tsc",
+    "build": "pnpm run contract && tsc -p tsconfig.build.json",
     "contract": "tsx scripts/generate-contract.ts",
     "dev": "pnpm run contract && tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "fix:prettier": "prettier --write src scripts",
+    "fix:prettier": "prettier --write src scripts vitest.config.ts",
     "fix": "pnpm run fix:prettier",
-    "lint:prettier": "prettier --check src scripts",
+    "lint:prettier": "prettier --check src scripts vitest.config.ts",
     "lint": "pnpm run lint:prettier",
     "test": "pnpm run contract && vitest run",
     "test:watch": "pnpm run contract && vitest",

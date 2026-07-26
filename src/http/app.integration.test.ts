@@ -131,9 +131,16 @@ describe('OAuth + MCP integration', () => {
     const prmBody = (await prm.json()) as {
       resource: string
       authorization_servers: string[]
+      scopes_supported: string[]
     }
     expect(prmBody.resource).toBe(`${baseUrl}/mcp`)
     expect(prmBody.authorization_servers).toEqual([baseUrl])
+    // `/authorize` は空scopeを拒否するので、要求すべきscopeがdiscoveryで分かる必要がある
+    expect(prmBody.scopes_supported).toEqual([
+      'cosense:read',
+      'cosense:write',
+      'offline_access',
+    ])
 
     const asm = await fetch(`${baseUrl}/.well-known/oauth-authorization-server`)
     expect(asm.status).toBe(200)
@@ -363,6 +370,12 @@ describe('OAuth + MCP integration', () => {
       },
     })
     expect(init.status).toBe(200)
+    // serverInfo.versionはMCPスキーマ上必須。package.jsonのversion欠落で
+    // undefinedになっていても200は返るため、値まで確かめる。
+    expect(init.json.result.serverInfo).toMatchObject({
+      name: 'cosense-cli-mcp',
+      version: expect.stringMatching(/^\d+\.\d+\.\d+/),
+    })
 
     const list = await callMcp(accessToken, {
       jsonrpc: '2.0',
@@ -527,6 +540,15 @@ describe('OAuth + MCP integration', () => {
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
     })
     expect(res.status).toBe(401)
+
+    // クライアントはこのヘッダを起点にdiscoveryを始めるので、無いと認可が開始されない
+    const challenge = res.headers.get('WWW-Authenticate') ?? ''
+    expect(challenge).toContain(
+      `resource_metadata="${baseUrl}/.well-known/oauth-protected-resource"`,
+    )
+    expect(challenge).toContain(
+      'scope="cosense:read cosense:write offline_access"',
+    )
   })
 
   it('rejects an expired access token', async () => {

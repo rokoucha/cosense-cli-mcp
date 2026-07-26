@@ -29,9 +29,26 @@ export interface CliRequest {
   stdin?: string
   pat: string
   timeoutMs: number
+  maxStdinBytes: number
   maxStdoutBytes: number
   maxStderrBytes: number
   signal?: AbortSignal
+}
+
+/** stdinが上限を超えた。CLIを起動する前に弾く。 */
+export class CliStdinTooLargeError extends Error {
+  constructor(bytes: number, maxBytes: number) {
+    super(`stdin is ${bytes} bytes, which exceeds the limit of ${maxBytes}`)
+    this.name = 'CliStdinTooLargeError'
+  }
+}
+
+/** CLIを起動する前にrequestが中断されていた。 */
+export class CliAbortedError extends Error {
+  constructor() {
+    super('request was aborted before the command started')
+    this.name = 'CliAbortedError'
+  }
 }
 
 export interface CliResult {
@@ -110,8 +127,21 @@ export class CliExecutor {
   }
 
   async execute(request: CliRequest): Promise<CliResult> {
+    if (request.stdin !== undefined) {
+      const bytes = Buffer.byteLength(request.stdin, 'utf8')
+      if (bytes > request.maxStdinBytes) {
+        throw new CliStdinTooLargeError(bytes, request.maxStdinBytes)
+      }
+    }
+
     const release = await this.semaphore.acquire()
     try {
+      // AbortSignalはlistener登録より後のabortしか通知しない。キュー待ちの間に
+      // 切断されたrequestや、渡された時点で既にabort済みのrequestが、ここまで来て
+      // CLIをspawnしてしまうため、spawn直前に現在の状態を直接見る。
+      if (request.signal?.aborted) {
+        throw new CliAbortedError()
+      }
       return await this.run(request)
     } finally {
       release()

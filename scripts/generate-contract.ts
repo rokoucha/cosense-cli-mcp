@@ -19,6 +19,15 @@ import { resolveCosenseBin } from '../src/cli/resolveBin.js'
 
 const UPSTREAM_REPO = 'helpfeel/cosense-cli'
 
+/**
+ * 生成物のフォーマット/取得対象を変えたら上げる。
+ *
+ * 再生成の要否をCLIのversionだけで判定すると、SKILL_DOC_PATHSやrenderModuleを
+ * 変えてもCLIが据え置きの間は古い生成物が使い回され、変更が効いていないのに
+ * ビルドが通ってしまう。
+ */
+const GENERATOR_VERSION = 1
+
 /** 取得するスキル。上流の `skills/cosense/` 配下のパスをdoc名にマップする。 */
 const SKILL_DOC_PATHS: Record<string, string> = {
   'SKILL.md': 'skills/cosense/SKILL.md',
@@ -97,16 +106,22 @@ async function collectArtifacts(cliVersion: string): Promise<Artifacts> {
 }
 
 /**
- * 生成済みファイルが現在installされているCLIから作られたものなら再生成しない。
- * 2回目以降のローカル開発をオフラインで回せるようにするための短絡。
+ * 生成済みファイルが現在installされているCLIと現在の生成ロジックから作られたものなら
+ * 再生成しない。2回目以降のローカル開発をオフラインで回せるようにするための短絡。
  */
 function isUpToDate(cliVersion: string): boolean {
   if (!existsSync(outputPath)) {
     return false
   }
   const generated = readFileSync(outputPath, 'utf8')
-  const match = /export const CLI_VERSION = "([^"]*)"/.exec(generated)
-  return match?.[1] === cliVersion
+  const versionMatch = /export const CLI_VERSION = "([^"]*)"/.exec(generated)
+  const generatorMatch = /export const GENERATOR_VERSION = (\d+)/.exec(
+    generated,
+  )
+  return (
+    versionMatch?.[1] === cliVersion &&
+    generatorMatch?.[1] === String(GENERATOR_VERSION)
+  )
 }
 
 function renderRecord(record: Record<string, string>): string {
@@ -122,6 +137,9 @@ function renderModule(artifacts: Artifacts): string {
 
 /** 生成時にインストールされていた @helpfeel/cosense-cli のversion。 */
 export const CLI_VERSION = ${JSON.stringify(artifacts.cliVersion)}
+
+/** 生成に使った scripts/generate-contract.ts のフォーマットversion。 */
+export const GENERATOR_VERSION = ${GENERATOR_VERSION}
 
 /** スキルを取得した上流のgit ref。 */
 export const SKILL_REF = ${JSON.stringify(artifacts.skillRef)}

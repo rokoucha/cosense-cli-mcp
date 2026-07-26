@@ -3,7 +3,7 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import type { AnyToolDefinition } from '../cli/toolDefinitions.js'
 import { rewriteCliGuidance } from '../cli/cliMessage.js'
-import type { CliExecutor } from '../cli/executor.js'
+import { CliStdinTooLargeError, type CliExecutor } from '../cli/executor.js'
 import type { Env } from '../config/env.js'
 import { logCliCommand } from '../http/logging.js'
 
@@ -56,18 +56,29 @@ export function registerTools(
         const invocation = definition.build(args)
         const requestId = randomUUID()
         const startedAt = process.hrtime.bigint()
-        const result = await executor.execute({
-          command: invocation.command,
-          args: invocation.args,
-          ...(invocation.stdin !== undefined
-            ? { stdin: invocation.stdin }
-            : {}),
-          pat,
-          timeoutMs: env.cli.timeoutMs,
-          maxStdoutBytes: env.cli.maxStdoutBytes,
-          maxStderrBytes: env.cli.maxStderrBytes,
-          signal: extra.signal,
-        })
+        let result
+        try {
+          result = await executor.execute({
+            command: invocation.command,
+            args: invocation.args,
+            ...(invocation.stdin !== undefined
+              ? { stdin: invocation.stdin }
+              : {}),
+            pat,
+            timeoutMs: env.cli.timeoutMs,
+            maxStdinBytes: env.cli.maxStdinBytes,
+            maxStdoutBytes: env.cli.maxStdoutBytes,
+            maxStderrBytes: env.cli.maxStderrBytes,
+            signal: extra.signal,
+          })
+        } catch (error) {
+          if (error instanceof CliStdinTooLargeError) {
+            return errorResult(
+              `command "${definition.name}" was not run: ${error.message}`,
+            )
+          }
+          throw error
+        }
         const durationMs = Math.round(
           Number(process.hrtime.bigint() - startedAt) / 1_000_000,
         )

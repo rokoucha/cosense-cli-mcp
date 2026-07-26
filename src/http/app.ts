@@ -34,6 +34,10 @@ export function createApp(env: Env): Express {
   app.use(securityHeaders)
   app.use(requestLoggingMiddleware(env))
 
+  app.get('/health', (_req: Request, res: Response) => {
+    res.status(200).json({ status: 'ok' })
+  })
+
   app.use(createOAuthRouter(env, executor))
 
   const bearerAuth = createBearerAuthMiddleware(env)

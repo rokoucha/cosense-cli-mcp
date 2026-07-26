@@ -151,6 +151,14 @@ describe('OAuth + MCP integration', () => {
     await new Promise<void>((resolve) => server.close(() => resolve()))
   })
 
+  it('exposes an unauthenticated health check', async () => {
+    const res = await fetch(`${baseUrl}/health`)
+
+    expect(res.status).toBe(200)
+    expect(res.headers.get('content-type')).toContain('application/json')
+    await expect(res.json()).resolves.toEqual({ status: 'ok' })
+  })
+
   it('exposes protected resource and authorization server metadata', async () => {
     const prm = await fetch(`${baseUrl}/.well-known/oauth-protected-resource`)
     expect(prm.status).toBe(200)

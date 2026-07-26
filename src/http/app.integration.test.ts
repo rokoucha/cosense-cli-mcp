@@ -499,6 +499,11 @@ describe('OAuth + MCP integration', () => {
         properties?: Record<string, unknown>
         required?: string[]
       }
+      outputSchema?: {
+        type?: string
+        properties?: Record<string, unknown>
+        required?: string[]
+      }
     }>
     expect(tools.map((tool) => tool.name).sort()).toEqual(
       Object.keys(expectedToolSchemas).sort(),
@@ -516,6 +521,11 @@ describe('OAuth + MCP integration', () => {
       expect((tool.inputSchema.required ?? []).sort(), tool.name).toEqual(
         expected.required.slice().sort(),
       )
+      expect(tool.outputSchema, tool.name).toMatchObject({
+        type: 'object',
+        properties: { text: { type: 'string' } },
+        required: ['text'],
+      })
     }
 
     const previewEditTool = tools.find((tool) => tool.name === 'previewEdit')
@@ -546,6 +556,7 @@ describe('OAuth + MCP integration', () => {
     expect(call.status).toBe(200)
     expect(call.json.result.isError).toBeFalsy()
     expect(call.json.result.content[0].text).toContain('Test Page')
+    expect(call.json.result.structuredContent.text).toContain('Test Page')
   })
 
   it('returns a downloaded image as an image content block and cleans up the temp file', async () => {
@@ -579,6 +590,7 @@ describe('OAuth + MCP integration', () => {
     const [summary, image] = call.json.result.content
     expect(summary.type).toBe('text')
     expect(summary.text).toContain('image/png')
+    expect(call.json.result.structuredContent.text).toBe(summary.text)
     // サーバー側の一時ファイルのパスはクライアントに渡さない
     expect(summary.text).not.toContain('cosense-mcp-')
     expect(image).toMatchObject({ type: 'image', mimeType: 'image/png' })
@@ -678,6 +690,7 @@ describe('OAuth + MCP integration', () => {
     })
     expect(guide.json.result.isError).toBeFalsy()
     expect(guide.json.result.content[0].text).toContain('OAuth')
+    expect(guide.json.result.structuredContent.text).toContain('OAuth')
 
     const help = await callMcp(accessToken, {
       jsonrpc: '2.0',
@@ -687,6 +700,7 @@ describe('OAuth + MCP integration', () => {
     })
     expect(help.json.result.isError).toBeFalsy()
     expect(help.json.result.content[0].text).toContain('Usage:')
+    expect(help.json.result.structuredContent.text).toContain('Usage:')
   })
 
   it('rewrites the CLI login instruction in tool errors', async () => {

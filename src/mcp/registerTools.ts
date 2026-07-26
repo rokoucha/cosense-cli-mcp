@@ -4,12 +4,17 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+import { z } from 'zod'
 import type { AnyToolDefinition } from '../cli/toolDefinitions.js'
 import { rewriteCliGuidance } from '../cli/cliMessage.js'
 import { CliStdinTooLargeError, type CliExecutor } from '../cli/executor.js'
 import type { Env } from '../config/env.js'
 import { logCliCommand } from '../http/logging.js'
 import { readImageOutput, summarizeDownloadStdout } from './imageOutput.js'
+
+const textOutputSchema = z.object({
+  text: z.string().describe('toolの実行結果'),
+})
 
 function redact(text: string, secrets: string[]): string {
   let result = text
@@ -41,14 +46,16 @@ async function fileOutputResult(
   if (image.kind === 'rejected') {
     return errorResult([...summary, image.reason].join('\n'))
   }
+  const text = [
+    ...summary,
+    `画像を添付しました (${image.mimeType}, ${image.bytes} bytes)`,
+  ].join('\n')
   return {
+    structuredContent: { text },
     content: [
       {
         type: 'text',
-        text: [
-          ...summary,
-          `画像を添付しました (${image.mimeType}, ${image.bytes} bytes)`,
-        ].join('\n'),
+        text,
       },
       { type: 'image', data: image.base64, mimeType: image.mimeType },
     ],
@@ -67,6 +74,7 @@ export function registerTools(
       {
         description: definition.description,
         inputSchema: definition.inputSchema,
+        outputSchema: textOutputSchema,
         annotations: {
           readOnlyHint: definition.scope === 'cosense:read',
           destructiveHint: definition.destructive,
@@ -166,7 +174,10 @@ export function registerTools(
               ? `${result.stdout}\n${notes.join('\n')}`
               : result.stdout
 
-          return { content: [{ type: 'text', text }] }
+          return {
+            structuredContent: { text },
+            content: [{ type: 'text', text }],
+          }
         } finally {
           if (tempDir !== undefined) {
             await rm(tempDir, { recursive: true, force: true })

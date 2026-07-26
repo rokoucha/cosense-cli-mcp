@@ -4,6 +4,10 @@ import { z } from 'zod'
 import { ALLOWED_COMMANDS } from '../cli/executor.js'
 import { GUIDE_TOPIC_NAMES, guideTopic, helpText } from '../guidance/index.js'
 
+const textOutputSchema = z.object({
+  text: z.string().describe('ガイドまたはhelpの本文'),
+})
+
 /**
  * スキルとhelpを配るtool/resource。
  *
@@ -24,6 +28,7 @@ export function registerGuidance(server: McpServer): void {
             'スキルの名前。スキル中のリンク (例: [read-page.md](read-page.md)) と同じ文字列を渡す',
           ),
       }),
+      outputSchema: textOutputSchema,
       annotations: { readOnlyHint: true, destructiveHint: false },
     },
     ({ topic }): CallToolResult => {
@@ -39,7 +44,10 @@ export function registerGuidance(server: McpServer): void {
           ],
         }
       }
-      return { content: [{ type: 'text', text: content }] }
+      return {
+        structuredContent: { text: content },
+        content: [{ type: 'text', text: content }],
+      }
     },
   )
 
@@ -51,6 +59,7 @@ export function registerGuidance(server: McpServer): void {
       inputSchema: z.object({
         command: z.enum(ALLOWED_COMMANDS).describe('対象のtool名'),
       }),
+      outputSchema: textOutputSchema,
       annotations: { readOnlyHint: true, destructiveHint: false },
     },
     ({ command }): CallToolResult => {
@@ -61,7 +70,10 @@ export function registerGuidance(server: McpServer): void {
           content: [{ type: 'text', text: `no help for "${command}"` }],
         }
       }
-      return { content: [{ type: 'text', text: content }] }
+      return {
+        structuredContent: { text: content },
+        content: [{ type: 'text', text: content }],
+      }
     },
   )
 

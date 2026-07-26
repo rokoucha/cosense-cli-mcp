@@ -20,6 +20,7 @@ export interface OAuthClientConfig {
 
 export interface Env {
   port: number
+  shutdownTimeoutMs: number
   issuer: string
   allowedOrigin: string
   cli: {
@@ -200,6 +201,7 @@ export function loadEnv(): Env {
 
   const env: Env = {
     port: readIntEnv('PORT', 3000),
+    shutdownTimeoutMs: readIntEnv('SHUTDOWN_TIMEOUT_MS', 10_000),
     issuer: requireStringEnv('ISSUER'),
     allowedOrigin: readStringEnv('ALLOWED_ORIGIN', 'https://scrapbox.io'),
     cli: {

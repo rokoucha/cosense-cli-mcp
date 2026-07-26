@@ -8,6 +8,7 @@ function testKeySet(seed: string): JweKeySet {
 export function buildTestEnv(overrides: Partial<Env> = {}): Env {
   return {
     port: 3000,
+    shutdownTimeoutMs: 10_000,
     issuer: 'https://cosense-mcp.example.com',
     allowedOrigin: 'https://scrapbox.io',
     cli: {

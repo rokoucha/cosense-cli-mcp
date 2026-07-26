@@ -1,10 +1,11 @@
 import { loadEnv } from './config/env.js'
 import { createApp } from './http/app.js'
+import { registerGracefulShutdown } from './http/gracefulShutdown.js'
 
 const env = loadEnv()
 const app = createApp(env)
 
-app.listen(env.port, () => {
+const server = app.listen(env.port, () => {
   console.log(
     JSON.stringify({
       event: 'server_started',
@@ -13,3 +14,5 @@ app.listen(env.port, () => {
     }),
   )
 })
+
+registerGracefulShutdown(server, env.shutdownTimeoutMs)

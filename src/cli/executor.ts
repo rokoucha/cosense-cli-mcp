@@ -9,6 +9,7 @@ export const ALLOWED_COMMANDS = [
   'browseRelatedPages',
   'readPage',
   'readFileInfo',
+  'downloadFile',
   'readProjectMembers',
   'listPages',
   'list1hopLinks',

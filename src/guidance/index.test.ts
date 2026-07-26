@@ -71,7 +71,8 @@ describe('help texts', () => {
   })
 
   it('returns undefined for commands this server does not expose', () => {
+    // loginはCLIにあるがこのサーバーは公開しない(認証はOAuthで行うため)
     expect(helpText('login')).toBeUndefined()
-    expect(helpText('downloadFile')).toBeUndefined()
+    expect(helpText('nonexistentCommand')).toBeUndefined()
   })
 })

@@ -14,9 +14,9 @@ function getDefinition(name: string) {
 }
 
 describe('createToolDefinitions', () => {
-  it('registers all 17 tools with unique names', () => {
-    expect(definitions).toHaveLength(17)
-    expect(new Set(definitions.map((d) => d.name)).size).toBe(17)
+  it('registers all 18 tools with unique names', () => {
+    expect(definitions).toHaveLength(18)
+    expect(new Set(definitions.map((d) => d.name)).size).toBe(18)
   })
 
   it('whoami builds argv from origin', () => {
@@ -86,6 +86,49 @@ describe('createToolDefinitions', () => {
       limit: env.limits.listPagesMaxLimit + 1,
     })
     expect(result.success).toBe(false)
+  })
+
+  it('downloadFile writes to the given output path and defaults to --thumbnail', () => {
+    const def = getDefinition('downloadFile')
+    expect(def.fileOutput).toBe(true)
+
+    const input = def.inputSchema.parse({
+      fileUrl: 'https://scrapbox.io/files/5f151efbacbb17001a58f120.png',
+    })
+    expect(def.build(input, '/tmp/out/download')).toEqual({
+      command: 'downloadFile',
+      args: [
+        'https://scrapbox.io/files/5f151efbacbb17001a58f120.png',
+        '/tmp/out/download',
+        '--thumbnail',
+      ],
+    })
+  })
+
+  it('downloadFile omits --thumbnail when the original is requested', () => {
+    const def = getDefinition('downloadFile')
+    const input = def.inputSchema.parse({
+      fileUrl: 'https://scrapbox.io/files/5f151efbacbb17001a58f120.png',
+      thumbnail: false,
+      project: 'https://scrapbox.io/shokai',
+    })
+    expect(def.build(input, '/tmp/out/download')).toEqual({
+      command: 'downloadFile',
+      args: [
+        'https://scrapbox.io/files/5f151efbacbb17001a58f120.png',
+        '/tmp/out/download',
+        '--project',
+        'https://scrapbox.io/shokai',
+      ],
+    })
+  })
+
+  it('downloadFile refuses to build argv without an output path', () => {
+    const def = getDefinition('downloadFile')
+    const input = def.inputSchema.parse({
+      fileUrl: 'https://scrapbox.io/files/5f151efbacbb17001a58f120.png',
+    })
+    expect(() => def.build(input)).toThrow()
   })
 
   it('searchFullText includes --or and --sort flags', () => {

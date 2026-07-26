@@ -1,6 +1,8 @@
 import { EventEmitter } from 'node:events'
+import { existsSync } from 'node:fs'
 import type { Server } from 'node:http'
 import { createServer } from 'node:http'
+import { dirname } from 'node:path'
 import { PassThrough, Writable } from 'node:stream'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { computeS256Challenge } from '../oauth/pkce.js'
@@ -27,6 +29,9 @@ function createFakeChild(): FakeChild {
 const VALID_PAT = 'valid-pat'
 const INVALID_PAT = 'invalid-pat'
 
+/** downloadFileの書き出し先。テストから一時ファイルの後始末を確かめるために控える。 */
+const downloadOutputPaths: string[] = []
+
 vi.mock('node:child_process', () => ({
   spawn: (
     bin: string,
@@ -36,6 +41,27 @@ vi.mock('node:child_process', () => ({
     const child = createFakeChild()
     const command = args[0]
     setImmediate(() => {
+      if (command === 'downloadFile') {
+        const outputPath = args[2] as string
+        downloadOutputPaths.push(outputPath)
+        const png = Buffer.concat([
+          Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+          Buffer.from('fake png body'),
+        ])
+        void import('node:fs/promises').then(async (fs) => {
+          await fs.writeFile(outputPath, png)
+          child.stdout.end(
+            JSON.stringify({
+              path: outputPath,
+              contentType: 'image/png',
+              size: png.length,
+            }),
+          )
+          child.stderr.end('')
+          child.emit('close', 0)
+        })
+        return
+      }
       if (command === 'whoami') {
         if (options.env?.['COSENSE_PAT'] === VALID_PAT) {
           child.stdout.end('{"id":"user123"}')
@@ -401,6 +427,50 @@ describe('OAuth + MCP integration', () => {
     expect(call.status).toBe(200)
     expect(call.json.result.isError).toBeFalsy()
     expect(call.json.result.content[0].text).toContain('Test Page')
+  })
+
+  it('returns a downloaded image as an image content block and cleans up the temp file', async () => {
+    const accessToken = await getAccessToken('cosense:read')
+
+    await callMcp(accessToken, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: {
+        protocolVersion: '2025-06-18',
+        capabilities: {},
+        clientInfo: { name: 'integration-test', version: '0.0.0' },
+      },
+    })
+
+    const call = await callMcp(accessToken, {
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'tools/call',
+      params: {
+        name: 'downloadFile',
+        arguments: {
+          fileUrl: 'https://scrapbox.io/files/5f151efbacbb17001a58f120.png',
+        },
+      },
+    })
+    expect(call.status).toBe(200)
+    expect(call.json.result.isError).toBeFalsy()
+
+    const [summary, image] = call.json.result.content
+    expect(summary.type).toBe('text')
+    expect(summary.text).toContain('image/png')
+    // サーバー側の一時ファイルのパスはクライアントに渡さない
+    expect(summary.text).not.toContain('cosense-mcp-')
+    expect(image).toMatchObject({ type: 'image', mimeType: 'image/png' })
+    expect(Buffer.from(image.data, 'base64').subarray(0, 8)).toEqual(
+      Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    )
+
+    const outputPath = downloadOutputPaths.at(-1)
+    expect(outputPath).toBeDefined()
+    expect(existsSync(outputPath as string)).toBe(false)
+    expect(existsSync(dirname(outputPath as string))).toBe(false)
   })
 
   it('rejects tools/call for a write tool when only cosense:read was granted', async () => {

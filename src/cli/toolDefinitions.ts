@@ -33,7 +33,16 @@ export interface ToolDefinition<TInput = unknown> {
   scope: 'cosense:read' | 'cosense:write'
   destructive: boolean
   inputSchema: z.ZodType<TInput>
-  build: (input: TInput) => CliInvocation
+  /**
+   * argvを組み立てる。`fileOutput`が真のtoolには、CLIの書き出し先として
+   * registerToolsが用意した一時ファイルの絶対パスが`outputPath`で渡る。
+   */
+  build: (input: TInput, outputPath?: string) => CliInvocation
+  /**
+   * 結果を標準出力ではなくファイルに書くtool。registerToolsが一時ファイルを用意し、
+   * 実行後に中身を回収してcontentに載せ、ファイルを消す。
+   */
+  fileOutput?: boolean
 }
 
 /** 異種のTInputを持つToolDefinitionを1つの配列にまとめるための型消去エイリアス。 */
@@ -161,6 +170,38 @@ export function createToolDefinitions(env: Env): AnyToolDefinition[] {
           ...(input.project ? ['--project', input.project] : []),
         ],
       }),
+    }),
+    defineTool({
+      name: 'downloadFile',
+      description:
+        '画像ファイルの本体を取得して画像として返す。画像以外のファイル(PDF等)は本文をreadFileInfoで読む',
+      scope: 'cosense:read',
+      destructive: false,
+      fileOutput: true,
+      inputSchema: z.object({
+        fileUrl,
+        project: projectUrl.optional(),
+        thumbnail: z
+          .boolean()
+          .optional()
+          .describe(
+            '縮小版を取得する(既定: true)。原本の解像度が要る時だけfalseにする。サイズ上限を超えると画像を返せない',
+          ),
+      }),
+      build: (input, outputPath) => {
+        if (outputPath === undefined) {
+          throw new Error('downloadFile requires an output path')
+        }
+        return {
+          command: 'downloadFile',
+          args: [
+            input.fileUrl,
+            outputPath,
+            ...(input.thumbnail === false ? [] : ['--thumbnail']),
+            ...(input.project ? ['--project', input.project] : []),
+          ],
+        }
+      },
     }),
     defineTool({
       name: 'readProjectMembers',

@@ -21,6 +21,7 @@ export function buildTestEnv(overrides: Partial<Env> = {}): Env {
       maxRequestBodyBytes: 1024 * 1024,
       maxPreviewEditOps: 1000,
       listPagesMaxLimit: 1000,
+      maxImageBytes: 3 * 1024 * 1024,
     },
     logging: {
       hashSecret: new Uint8Array(32).fill(7),

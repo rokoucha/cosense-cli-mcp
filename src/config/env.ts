@@ -33,6 +33,8 @@ export interface Env {
     maxRequestBodyBytes: number
     maxPreviewEditOps: number
     listPagesMaxLimit: number
+    /** tool resultに画像として載せるファイルのbyte上限(base64化前)。 */
+    maxImageBytes: number
   }
   logging: {
     /** subjectを不可逆hashするためのHMAC鍵。ログに生のsubjectを残さないために使う。 */
@@ -214,6 +216,9 @@ export function loadEnv(): Env {
       ),
       maxPreviewEditOps: readIntEnv('MAX_PREVIEW_EDIT_OPS', 1000),
       listPagesMaxLimit: readIntEnv('LIST_PAGES_MAX_LIMIT', 1000),
+      // base64にすると約1.33倍になり、そのままcontextに載る。モデル側の画像サイズ上限に
+      // 収まる範囲に抑える。原本が大きい時はthumbnailを使わせる。
+      maxImageBytes: readIntEnv('MAX_IMAGE_BYTES', 3 * 1024 * 1024),
     },
     logging: {
       hashSecret: parseSingleKey('LOG_HASH_SECRET'),

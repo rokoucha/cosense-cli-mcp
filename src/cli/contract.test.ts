@@ -66,6 +66,14 @@ describe('cosense-cli contract', () => {
     expect(stdout).toContain('--filter')
   })
 
+  it('downloadFile usage takes <fileUrl> <outputPath> and documents --thumbnail', () => {
+    const { stdout } = runCli(['downloadFile', '--help'])
+    expect(stdout).toMatch(/cosense downloadFile <fileUrl> <outputPath>/)
+    expect(stdout).toContain('--thumbnail')
+    // registerToolsは一時directoryを自分で作る。CLIが親を作らない前提が変わっていないか見る。
+    expect(stdout).toContain('親ディレクトリは自動作成しない')
+  })
+
   it('previewEdit usage documents --new and stdin-based ops', () => {
     const { stdout } = runCli(['previewEdit', '--help'])
     expect(stdout).toContain('--new')

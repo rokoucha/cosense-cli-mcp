@@ -203,6 +203,7 @@ describe('OAuth + MCP integration', () => {
   }
 
   it('rejects an invalid PAT during the authorize step (re-renders the form, no code issued)', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
     const { requestToken, csrfToken, cookie } = await startAuthorize(
       'cosense:read',
       'state-1',
@@ -226,6 +227,22 @@ describe('OAuth + MCP integration', () => {
     expect(res.status).toBe(200)
     const html = await res.text()
     expect(html).toContain('認証に失敗しました')
+    const cliLog = logSpy.mock.calls
+      .map(([line]) => JSON.parse(String(line)) as Record<string, unknown>)
+      .find(
+        (event) =>
+          event['event'] === 'cli_command' &&
+          event['toolName'] === 'oauth_authorize',
+      )
+    expect(cliLog).toMatchObject({
+      commandName: 'whoami',
+      exitCode: 1,
+      timedOut: false,
+      stdoutTruncated: false,
+      stderrTruncated: false,
+    })
+    expect(cliLog?.['requestId']).toEqual(expect.any(String))
+    logSpy.mockRestore()
   })
 
   async function completeAuthorizationCodeFlow(

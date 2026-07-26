@@ -1,7 +1,8 @@
 import express, { Router } from 'express'
-import type { Response } from 'express'
+import type { Request, Response } from 'express'
 import type { CliExecutor } from '../cli/executor.js'
 import type { Env } from '../config/env.js'
+import { logCliCommand } from '../http/logging.js'
 import {
   AUTHORIZE_FORM_CSP,
   generateCsrfToken,
@@ -305,6 +306,7 @@ export function createOAuthRouter(env: Env, executor: CliExecutor): Router {
           return
         }
 
+        const startedAt = process.hrtime.bigint()
         const whoamiResult = await executor.execute({
           command: 'whoami',
           args: [env.allowedOrigin],
@@ -313,6 +315,21 @@ export function createOAuthRouter(env: Env, executor: CliExecutor): Router {
           maxStdinBytes: env.cli.maxStdinBytes,
           maxStdoutBytes: env.cli.maxStdoutBytes,
           maxStderrBytes: env.cli.maxStderrBytes,
+        })
+        const durationMs = Math.round(
+          Number(process.hrtime.bigint() - startedAt) / 1_000_000,
+        )
+        const requestId = (req as Request & { requestId?: string }).requestId
+        logCliCommand({
+          event: 'cli_command',
+          requestId: requestId ?? 'unknown',
+          toolName: 'oauth_authorize',
+          commandName: 'whoami',
+          durationMs,
+          exitCode: whoamiResult.exitCode,
+          timedOut: whoamiResult.timedOut,
+          stdoutTruncated: whoamiResult.stdoutTruncated,
+          stderrTruncated: whoamiResult.stderrTruncated,
         })
 
         if (whoamiResult.exitCode !== 0 || whoamiResult.timedOut) {

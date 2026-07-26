@@ -240,6 +240,8 @@ describe('OAuth + MCP integration', () => {
       timedOut: false,
       stdoutTruncated: false,
       stderrTruncated: false,
+      failureKind: 'upstream_http_error',
+      upstreamHttpStatus: 401,
     })
     expect(cliLog?.['requestId']).toEqual(expect.any(String))
     logSpy.mockRestore()

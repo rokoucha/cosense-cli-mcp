@@ -67,6 +67,14 @@ export interface CliCommandLogEvent {
   timedOut: boolean
   stdoutTruncated: boolean
   stderrTruncated: boolean
+  failureKind?:
+    | 'timeout'
+    | 'upstream_http_error'
+    | 'dns_error'
+    | 'tls_error'
+    | 'connection_error'
+    | 'cli_error'
+  upstreamHttpStatus?: number
 }
 
 export function logCliCommand(fields: CliCommandLogEvent): void {

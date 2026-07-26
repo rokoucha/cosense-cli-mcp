@@ -33,6 +33,50 @@ import { ALL_SCOPES } from './scopes.js'
 
 const CSRF_COOKIE_NAME = 'cosense_mcp_csrf'
 
+function classifyCliFailure(
+  stderr: string,
+  timedOut: boolean,
+): {
+  failureKind:
+    | 'timeout'
+    | 'upstream_http_error'
+    | 'dns_error'
+    | 'tls_error'
+    | 'connection_error'
+    | 'cli_error'
+  upstreamHttpStatus?: number
+} {
+  if (timedOut) {
+    return { failureKind: 'timeout' }
+  }
+
+  const httpStatus = /^HTTP\s+(\d{3})\b/m.exec(stderr)?.[1]
+  if (httpStatus !== undefined) {
+    return {
+      failureKind: 'upstream_http_error',
+      upstreamHttpStatus: Number.parseInt(httpStatus, 10),
+    }
+  }
+  if (/\b(?:ENOTFOUND|EAI_AGAIN|getaddrinfo)\b/i.test(stderr)) {
+    return { failureKind: 'dns_error' }
+  }
+  if (
+    /\b(?:CERT_[A-Z_]+|UNABLE_TO_VERIFY_LEAF_SIGNATURE|TLS|SSL|certificate)\b/i.test(
+      stderr,
+    )
+  ) {
+    return { failureKind: 'tls_error' }
+  }
+  if (
+    /\b(?:ECONNREFUSED|ECONNRESET|ETIMEDOUT|EHOSTUNREACH|fetch failed)\b/i.test(
+      stderr,
+    )
+  ) {
+    return { failureKind: 'connection_error' }
+  }
+  return { failureKind: 'cli_error' }
+}
+
 function parseScope(raw: string): string[] {
   return raw.split(' ').filter(Boolean)
 }
@@ -320,6 +364,10 @@ export function createOAuthRouter(env: Env, executor: CliExecutor): Router {
           Number(process.hrtime.bigint() - startedAt) / 1_000_000,
         )
         const requestId = (req as Request & { requestId?: string }).requestId
+        const failed =
+          whoamiResult.exitCode !== 0 || whoamiResult.timedOut
+            ? classifyCliFailure(whoamiResult.stderr, whoamiResult.timedOut)
+            : undefined
         logCliCommand({
           event: 'cli_command',
           requestId: requestId ?? 'unknown',
@@ -330,6 +378,7 @@ export function createOAuthRouter(env: Env, executor: CliExecutor): Router {
           timedOut: whoamiResult.timedOut,
           stdoutTruncated: whoamiResult.stdoutTruncated,
           stderrTruncated: whoamiResult.stderrTruncated,
+          ...failed,
         })
 
         if (whoamiResult.exitCode !== 0 || whoamiResult.timedOut) {

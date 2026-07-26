@@ -1,0 +1,32 @@
+{
+  "name": "cosense-cli-mcp",
+  "packageManager": "pnpm@11.17.0+sha512.cca3cea332ad254bb84145f966d19f4879615210346fc92c79a047f23a0d7b3cca3c3792f0076ba1f1831d277efbcf0a9119b31a9a60eca7fb3d6231f331ef72",
+  "type": "module",
+  "dependencies": {
+    "@helpfeel/cosense-cli": "1.10.1",
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "express": "5.2.1",
+    "jose": "6.2.4",
+    "zod": "4.4.3"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/node": "26.1.1",
+    "prettier": "3.9.6",
+    "tsx": "4.23.1",
+    "typescript": "7.0.2",
+    "vitest": "4.1.10"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "fix:prettier": "prettier --write src",
+    "fix": "pnpm run fix:prettier",
+    "lint:prettier": "prettier --check src",
+    "lint": "pnpm run lint:prettier",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "type-check": "tsc --noEmit"
+  }
+}

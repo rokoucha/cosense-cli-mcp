@@ -1,0 +1,14 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    ":dependencyDashboard",
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "automerge": true,
+  "automergeType": "branch",
+  "lockFileMaintenance": {
+    "enabled": true
+  },
+  "minimumReleaseAge": "1 day"
+}

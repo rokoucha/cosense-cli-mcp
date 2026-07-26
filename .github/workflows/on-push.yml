@@ -1,0 +1,33 @@
+name: on push
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version_tag: ${{ steps.version.outputs.version_tag }}
+    steps:
+      - name: Generate version tag
+        id: version
+        run: echo "version_tag=$(TZ=Asia/Tokyo date +'%Y%m%d.%H%M%S')" >> "$GITHUB_OUTPUT"
+
+  test:
+    uses: ./.github/workflows/wf-test.yml
+
+  build-container:
+    needs: [version, test]
+    uses: ./.github/workflows/wf-build-container.yml
+    with:
+      version_tag: ${{ needs.version.outputs.version_tag }}
+      push: ${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}

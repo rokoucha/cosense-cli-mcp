@@ -1,7 +1,12 @@
 import { randomBytes } from 'node:crypto'
 
-export const AUTHORIZE_FORM_CSP =
-  "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'"
+export function buildAuthorizeFormCsp(redirectUri: string): string {
+  const redirectUrl = new URL(redirectUri)
+  const redirectSource =
+    redirectUrl.origin === 'null' ? redirectUrl.protocol : redirectUrl.origin
+
+  return `default-src 'none'; style-src 'unsafe-inline'; form-action 'self' ${redirectSource}; base-uri 'none'; frame-ancestors 'none'`
+}
 
 export function generateCsrfToken(): string {
   return randomBytes(32).toString('base64url')

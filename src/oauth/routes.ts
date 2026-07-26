@@ -4,7 +4,7 @@ import type { CliExecutor } from '../cli/executor.js'
 import type { Env } from '../config/env.js'
 import { logCliCommand } from '../http/logging.js'
 import {
-  AUTHORIZE_FORM_CSP,
+  buildAuthorizeFormCsp,
   generateCsrfToken,
   renderAuthorizeForm,
 } from './authorizeForm.js'
@@ -145,12 +145,13 @@ function sendAuthorizeForm(
     csrfToken: string
     clientId: string
     scope: string
+    redirectUri: string
     errorMessage?: string
   },
 ): void {
   res
     .status(200)
-    .set('Content-Security-Policy', AUTHORIZE_FORM_CSP)
+    .set('Content-Security-Policy', buildAuthorizeFormCsp(params.redirectUri))
     .set('Cache-Control', 'no-store')
     .type('html')
     .send(renderAuthorizeForm(params))
@@ -277,6 +278,7 @@ export function createOAuthRouter(env: Env, executor: CliExecutor): Router {
         csrfToken,
         clientId,
         scope: scopes.join(' '),
+        redirectUri,
       })
     } catch (error) {
       next(error)
@@ -345,6 +347,7 @@ export function createOAuthRouter(env: Env, executor: CliExecutor): Router {
             csrfToken: csrfTokenField,
             clientId: claims.client_id,
             scope: claims.scope,
+            redirectUri: claims.redirect_uri,
             errorMessage: 'Personal Access Tokenを入力してください',
           })
           return
@@ -387,6 +390,7 @@ export function createOAuthRouter(env: Env, executor: CliExecutor): Router {
             csrfToken: csrfTokenField,
             clientId: claims.client_id,
             scope: claims.scope,
+            redirectUri: claims.redirect_uri,
             errorMessage:
               '認証に失敗しました。Personal Access Tokenを確認してください',
           })

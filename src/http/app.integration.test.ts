@@ -194,6 +194,9 @@ describe('OAuth + MCP integration', () => {
 
     const res = await fetch(url, { redirect: 'manual' })
     expect(res.status).toBe(200)
+    expect(res.headers.get('content-security-policy')).toContain(
+      "form-action 'self' https://client.example.com",
+    )
     const html = await res.text()
     return {
       requestToken: extractHiddenInput(html, 'request_token'),

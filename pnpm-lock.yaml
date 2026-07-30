@@ -12,8 +12,8 @@ importers:
         specifier: 1.10.1
         version: 1.10.1
       '@modelcontextprotocol/sdk':
-        specifier: 1.29.0
-        version: 1.29.0(zod@4.4.3)
+        specifier: 1.30.0
+        version: 1.30.0(zod@4.4.3)
       express:
         specifier: 5.2.1
         version: 5.2.1
@@ -224,8 +224,8 @@ packages:
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
 
-  '@modelcontextprotocol/sdk@1.29.0':
-    resolution: {integrity: sha512-zo37mZA9hJWpULgkRpowewez1y6ML5GsXJPY8FI0tBBCd77HEvza4jDqRKOXgHNn867PVGCyTdzqpz0izu5ZjQ==}
+  '@modelcontextprotocol/sdk@1.30.0':
+    resolution: {integrity: sha512-xKd8OIzlqNzcqcNumGAa6g+PW2kjD5vrpcKOnfldAUPP3j7lnqMPwlTXQm8gF+UwH72z0lqaRbjr9hqGz0eITA==}
     engines: {node: '>=18'}
     peerDependencies:
       '@cfworker/json-schema': ^4.1.1
@@ -1287,7 +1287,7 @@ snapshots:
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
-  '@modelcontextprotocol/sdk@1.29.0(zod@4.4.3)':
+  '@modelcontextprotocol/sdk@1.30.0(zod@4.4.3)':
     dependencies:
       '@hono/node-server': 1.19.15(hono@4.12.32)
       ajv: 8.20.0

@@ -9,7 +9,7 @@ import type { AnyToolDefinition } from '../cli/toolDefinitions.js'
 import { rewriteCliGuidance } from '../cli/cliMessage.js'
 import { CliStdinTooLargeError, type CliExecutor } from '../cli/executor.js'
 import type { Env } from '../config/env.js'
-import { logCliCommand } from '../http/logging.js'
+import { logCliCommand, logCliCommandStarted } from '../http/logging.js'
 import { readImageOutput, summarizeDownloadStdout } from './imageOutput.js'
 
 const textOutputSchema = z.object({
@@ -107,6 +107,17 @@ export function registerTools(
           const invocation = definition.build(args, outputPath)
           const requestId = randomUUID()
           const startedAt = process.hrtime.bigint()
+          logCliCommandStarted({
+            event: 'cli_command_started',
+            requestId,
+            toolName: definition.name,
+            commandName: invocation.command,
+            stdinBytes:
+              invocation.stdin === undefined
+                ? 0
+                : Buffer.byteLength(invocation.stdin, 'utf8'),
+            abortRequested: extra.signal.aborted,
+          })
           let result
           try {
             result = await executor.execute({
@@ -143,6 +154,9 @@ export function registerTools(
             timedOut: result.timedOut,
             stdoutTruncated: result.stdoutTruncated,
             stderrTruncated: result.stderrTruncated,
+            stdoutBytes: Buffer.byteLength(result.stdout, 'utf8'),
+            stderrBytes: Buffer.byteLength(result.stderr, 'utf8'),
+            abortRequested: extra.signal.aborted,
           })
 
           // 一時ファイルのパスはサーバーの内部構造でしかないので、PATと同じく伏せる。

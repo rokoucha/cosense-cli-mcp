@@ -20,6 +20,7 @@ export const ALLOWED_COMMANDS = [
   'search2hopLinks',
   'previewEdit',
   'submitEdit',
+  'replaceLinks',
 ] as const
 
 export type AllowedCommand = (typeof ALLOWED_COMMANDS)[number]

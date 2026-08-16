@@ -14,9 +14,9 @@ function getDefinition(name: string) {
 }
 
 describe('createToolDefinitions', () => {
-  it('registers all 18 tools with unique names', () => {
-    expect(definitions).toHaveLength(18)
-    expect(new Set(definitions.map((d) => d.name)).size).toBe(18)
+  it('registers all 19 tools with unique names', () => {
+    expect(definitions).toHaveLength(19)
+    expect(new Set(definitions.map((d) => d.name)).size).toBe(19)
   })
 
   it('whoami builds argv from origin', () => {
@@ -239,5 +239,20 @@ describe('createToolDefinitions', () => {
       pageUrl: 'https://evil.example.com/shokai/foo',
     })
     expect(result.success).toBe(false)
+  })
+
+  it('replaceLinks builds argv and is scoped as destructive write', () => {
+    const def = getDefinition('replaceLinks')
+    const input = def.inputSchema.parse({
+      projectUrl: 'https://scrapbox.io/shokai',
+      oldTitle: 'Old title',
+      newTitle: 'New title',
+    })
+    expect(def.build(input)).toEqual({
+      command: 'replaceLinks',
+      args: ['https://scrapbox.io/shokai', 'Old title', 'New title'],
+    })
+    expect(def.scope).toBe('cosense:write')
+    expect(def.destructive).toBe(true)
   })
 })

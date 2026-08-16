@@ -5,7 +5,7 @@
   "packageManager": "pnpm@11.17.0+sha512.cca3cea332ad254bb84145f966d19f4879615210346fc92c79a047f23a0d7b3cca3c3792f0076ba1f1831d277efbcf0a9119b31a9a60eca7fb3d6231f331ef72",
   "type": "module",
   "dependencies": {
-    "@helpfeel/cosense-cli": "1.10.1",
+    "@helpfeel/cosense-cli": "1.11.1",
     "@modelcontextprotocol/sdk": "1.30.0",
     "express": "5.2.1",
     "jose": "6.2.8",

@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@helpfeel/cosense-cli':
-        specifier: 1.10.1
-        version: 1.10.1
+        specifier: 1.11.1
+        version: 1.11.1
       '@modelcontextprotocol/sdk':
         specifier: 1.30.0
         version: 1.30.0(zod@4.4.3)
@@ -210,8 +210,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@helpfeel/cosense-cli@1.10.1':
-    resolution: {integrity: sha512-w7KvnoEPGdzAYWUYjz+kPaltqewRx5nE38jmos1ZHWQ9mL1NC/dGf1ghDyIQPuBybBczORFzbHwGz9qqM5PTHw==}
+  '@helpfeel/cosense-cli@1.11.1':
+    resolution: {integrity: sha512-ob0RjfkjM2cCwTd47qStt09HUzC08d8UKQzBzWKXlIdHeQmnC5H2XiGP4BF20IRHh1pnqiAsg2CtnF6PSAEM6Q==}
     engines: {node: '>=24'}
     hasBin: true
 
@@ -1046,8 +1046,8 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
-  tsx@4.23.0:
-    resolution: {integrity: sha512-eUdUIaCr963q2h5u3+QwvYp0+eqPvn+egeqZUm0hwERCqqx1E3kK5ehbGCvqSE5MQAULr67ww0cA3jKc3YkM1w==}
+  tsx@4.23.10:
+    resolution: {integrity: sha512-0Vb9eKU47njkxv/6B8CRZRDsxNDT/Pz+BIU+M5jw7xL3TdzAjSxlZUxu0xFL/kLpaG3sHZ0LH2wbK1T1yo7CUQ==}
     engines: {node: '>=18.0.0'}
     hasBin: true
 
@@ -1277,9 +1277,9 @@ snapshots:
   '@esbuild/win32-x64@0.28.1':
     optional: true
 
-  '@helpfeel/cosense-cli@1.10.1':
+  '@helpfeel/cosense-cli@1.11.1':
     dependencies:
-      tsx: 4.23.0
+      tsx: 4.23.10
 
   '@hono/node-server@1.19.15(hono@4.12.32)':
     dependencies:
@@ -2042,7 +2042,7 @@ snapshots:
   tslib@2.8.1:
     optional: true
 
-  tsx@4.23.0:
+  tsx@4.23.10:
     dependencies:
       esbuild: 0.28.1
     optionalDependencies:

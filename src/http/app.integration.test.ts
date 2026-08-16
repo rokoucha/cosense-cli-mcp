@@ -499,6 +499,10 @@ describe('OAuth + MCP integration', () => {
         properties: ['projectUrl', 'previewId'],
         required: ['projectUrl', 'previewId'],
       },
+      replaceLinks: {
+        properties: ['projectUrl', 'oldTitle', 'newTitle'],
+        required: ['projectUrl', 'oldTitle', 'newTitle'],
+      },
     }
     const tools = list.json.result.tools as Array<{
       name: string

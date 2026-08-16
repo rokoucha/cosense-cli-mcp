@@ -84,4 +84,11 @@ describe('cosense-cli contract', () => {
     const { stdout } = runCli(['submitEdit', '--help'])
     expect(stdout).toMatch(/cosense submitEdit <projectUrl> <previewId>/)
   })
+
+  it('replaceLinks usage takes project URL and old/new titles', () => {
+    const { stdout } = runCli(['replaceLinks', '--help'])
+    expect(stdout).toMatch(
+      /cosense replaceLinks <projectUrl> <oldTitle> <newTitle>/,
+    )
+  })
 })

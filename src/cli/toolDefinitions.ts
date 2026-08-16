@@ -404,5 +404,21 @@ export function createToolDefinitions(env: Env): AnyToolDefinition[] {
     }),
   })
 
-  return [...readOnlyTools, previewEdit, submitEdit]
+  const replaceLinks = defineTool({
+    name: 'replaceLinks',
+    description: '旧タイトルへのリンク記法を新しいタイトルに一括置換する',
+    scope: 'cosense:write',
+    destructive: true,
+    inputSchema: z.object({
+      projectUrl,
+      oldTitle: z.string().min(1).describe('置換前のページタイトル'),
+      newTitle: z.string().min(1).describe('置換後のページタイトル'),
+    }),
+    build: (input) => ({
+      command: 'replaceLinks',
+      args: [input.projectUrl, input.oldTitle, input.newTitle],
+    }),
+  })
+
+  return [...readOnlyTools, previewEdit, submitEdit, replaceLinks]
 }

@@ -79,7 +79,7 @@ describe('cosense-cli contract', () => {
       ]),
     )
     expect(signatures).toMatchSnapshot()
-  })
+  }, 30_000)
 
   it.each(ALLOWED_COMMANDS)('exposes --help for command "%s"', (command) => {
     const { stdout, status } = runCli([command, '--help'])

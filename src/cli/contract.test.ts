@@ -30,6 +30,27 @@ function runCli(args: string[]): { stdout: string; status: number | null } {
   }
 }
 
+/** MCPでは公開しないが、上流CLIに存在することを意図しているコマンド。 */
+const CLI_ONLY_COMMANDS = ['login'] as const
+
+function topLevelCommands(help: string): string[] {
+  const commandsSection = help.split(/^Commands:\s*$/m)[1]
+  if (commandsSection === undefined) {
+    throw new Error('top-level help has no Commands section')
+  }
+  return [...commandsSection.matchAll(/^  (\S+)\s{2,}/gm)].map(
+    (match) => match[1] as string,
+  )
+}
+
+function usageSection(help: string): string {
+  const afterHeading = help.split(/^Usage:\s*$/m)[1]
+  if (afterHeading === undefined) {
+    throw new Error('command help has no Usage section')
+  }
+  return (afterHeading.split(/\n(?=\S)/)[0] as string).trim()
+}
+
 describe('cosense-cli contract', () => {
   it('reports the exact pinned version', () => {
     const { stdout, status } = runCli(['--version'])
@@ -37,12 +58,27 @@ describe('cosense-cli contract', () => {
     expect(stdout.trim()).toBe(`cosense v${cosenseCliVersion}`)
   })
 
-  it('lists every allowed command in the top-level --help output', () => {
+  it('keeps the complete upstream command inventory accounted for', () => {
     const { stdout, status } = runCli(['--help'])
     expect(status).toBe(0)
-    for (const command of ALLOWED_COMMANDS) {
-      expect(stdout).toContain(command)
-    }
+    expect(topLevelCommands(stdout).sort()).toEqual(
+      [...ALLOWED_COMMANDS, ...CLI_ONLY_COMMANDS].sort(),
+    )
+  })
+
+  /**
+   * 上流CLIの引数・option変更をRenovate PRのCIで検出する。
+   * 意図した更新時は以下でsnapshotを更新し、差分をレビューする:
+   * pnpm run contract && pnpm exec vitest run src/cli/contract.test.ts -u
+   */
+  it('matches the reviewed usage signatures for every upstream command', () => {
+    const signatures = Object.fromEntries(
+      topLevelCommands(runCli(['--help']).stdout).map((command) => [
+        command,
+        usageSection(runCli([command, '--help']).stdout),
+      ]),
+    )
+    expect(signatures).toMatchSnapshot()
   })
 
   it.each(ALLOWED_COMMANDS)('exposes --help for command "%s"', (command) => {

@@ -1,0 +1,36 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`cosense-cli contract > matches the reviewed usage signatures for every upstream command 1`] = `
+{
+  "browsePage": "cosense browsePage <pageUrl>",
+  "browsePageChanges": "cosense browsePageChanges <projectUrl> <pageId> [--since <commitId>]",
+  "browseRelatedPages": "cosense browseRelatedPages <pageUrl>",
+  "deleteFile": "cosense deleteFile <fileUrl> [--project <projectUrl>]",
+  "downloadFile": "cosense downloadFile <fileUrl> <outputPath> [--thumbnail] [--project <projectUrl>]",
+  "list1hopLinks": "cosense list1hopLinks <pageUrl>",
+  "list2hopLinks": "cosense list2hopLinks <pageUrl>",
+  "listPageSnapshots": "cosense listPageSnapshots <projectUrl> <pageId>",
+  "listPages": "cosense listPages <projectUrl> [options]",
+  "listProjects": "cosense listProjects <origin>",
+  "login": "cosense login <origin|projectUrl>",
+  "previewDelete": "cosense previewDelete <projectUrl> <pageId>",
+  "previewEdit": "cosense previewEdit <projectUrl> <pageId> < ops.json      既存ページの編集 (stdinはops JSON)
+  cosense previewEdit --new <projectUrl> < body.txt         新規ページ作成 (stdinはプレーンテキスト本文)
+  cosense previewEdit --input-file ops.json <projectUrl> <pageId>
+  cosense previewEdit --new --input-file body.txt <projectUrl>
+  printf '%s' '<opsJSON>' | cosense previewEdit <projectUrl> <pageId>
+  printf '%s' '<text>'    | cosense previewEdit --new <projectUrl>",
+  "readFileInfo": "cosense readFileInfo <fileUrl> [--project <projectUrl>]",
+  "readPage": "cosense readPage <pageUrl>",
+  "readPageSnapshot": "cosense readPageSnapshot <projectUrl> <pageId> <snapshotId>",
+  "readProjectMembers": "cosense readProjectMembers <projectUrl>",
+  "replaceLinks": "cosense replaceLinks <projectUrl> <oldTitle> <newTitle>",
+  "search1hopLinks": "cosense search1hopLinks <pageUrl> <query> [--or]",
+  "search2hopLinks": "cosense search2hopLinks <pageUrl> <query> [--or]",
+  "searchFullText": "cosense searchFullText <projectUrl> <query> [--or] [--sort <pageRank|updated>]",
+  "searchVector": "cosense searchVector <projectUrl> <query>",
+  "submitEdit": "cosense submitEdit <projectUrl> <previewId>",
+  "uploadFile": "cosense uploadFile <projectUrl> <filePath> [--content-type <type>]",
+  "whoami": "cosense whoami <origin>",
+}
+`;

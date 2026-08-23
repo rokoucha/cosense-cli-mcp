@@ -12,6 +12,7 @@ import {
   previewIdSchema,
   searchQuerySchema,
   skipSchema,
+  snapshotIdSchema,
 } from '../validation/limits.js'
 import {
   fileUrlSchema,
@@ -34,15 +35,17 @@ export interface ToolDefinition<TInput = unknown> {
   destructive: boolean
   inputSchema: z.ZodType<TInput>
   /**
-   * argvを組み立てる。`fileOutput`が真のtoolには、CLIの書き出し先として
-   * registerToolsが用意した一時ファイルの絶対パスが`outputPath`で渡る。
+   * argvを組み立てる。ファイル入出力を伴うtoolには、registerToolsが用意した
+   * 一時ファイルの絶対パスが`filePath`で渡る。
    */
-  build: (input: TInput, outputPath?: string) => CliInvocation
+  build: (input: TInput, filePath?: string) => CliInvocation
   /**
    * 結果を標準出力ではなくファイルに書くtool。registerToolsが一時ファイルを用意し、
    * 実行後に中身を回収してcontentに載せ、ファイルを消す。
    */
   fileOutput?: boolean
+  /** MCP入力をCLIが読める一時ファイルへ変換するtool。 */
+  fileInput?: (input: TInput) => { fileName: string; bytes: Buffer }
 }
 
 /** 異種のTInputを持つToolDefinitionを1つの配列にまとめるための型消去エイリアス。 */
@@ -57,6 +60,27 @@ function defineTool<TInput>(
 
 const OP_TEXT_MAX_LENGTH = 20_000
 const CREATE_BODY_MAX_LENGTH = 1_000_000
+
+const fileNameSchema = z
+  .string()
+  .min(1)
+  .max(255)
+  .refine((name) => name !== '.' && name !== '..' && !/[\\/\0]/.test(name), {
+    message: 'must be a plain file name without path separators',
+  })
+
+function base64FileSchema(maxBytes: number) {
+  return z
+    .string()
+    .max(Math.ceil(maxBytes / 3) * 4)
+    .regex(
+      /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/,
+      'must be valid base64',
+    )
+    .refine((value) => Buffer.from(value, 'base64').length <= maxBytes, {
+      message: `decoded file must not exceed ${maxBytes} bytes`,
+    })
+}
 
 function opsSchema(maxOps: number) {
   const insertOp = z
@@ -156,6 +180,32 @@ export function createToolDefinitions(env: Env): AnyToolDefinition[] {
       destructive: false,
       inputSchema: z.object({ pageUrl }),
       build: (input) => ({ command: 'readPage', args: [input.pageUrl] }),
+    }),
+    defineTool({
+      name: 'listPageSnapshots',
+      description: 'ページのsnapshot一覧(Page History)を取得する',
+      scope: 'cosense:read',
+      destructive: false,
+      inputSchema: z.object({ projectUrl, pageId: pageIdSchema }),
+      build: (input) => ({
+        command: 'listPageSnapshots',
+        args: [input.projectUrl, input.pageId],
+      }),
+    }),
+    defineTool({
+      name: 'readPageSnapshot',
+      description: 'snapshotを指定してPage History上の過去の本文を読む',
+      scope: 'cosense:read',
+      destructive: false,
+      inputSchema: z.object({
+        projectUrl,
+        pageId: pageIdSchema,
+        snapshotId: snapshotIdSchema,
+      }),
+      build: (input) => ({
+        command: 'readPageSnapshot',
+        args: [input.projectUrl, input.pageId, input.snapshotId],
+      }),
     }),
     defineTool({
       name: 'readFileInfo',
@@ -392,9 +442,77 @@ export function createToolDefinitions(env: Env): AnyToolDefinition[] {
     },
   })
 
+  const uploadFileInputSchema = z.object({
+    projectUrl,
+    fileName: fileNameSchema.describe('元のファイル名（パスではなく名前のみ）'),
+    data: base64FileSchema(env.cli.maxStdinBytes).describe(
+      `ファイル本体のBase64表現（最大${env.cli.maxStdinBytes} bytes）`,
+    ),
+    contentType: z
+      .string()
+      .min(1)
+      .max(255)
+      .refine((value) => !/[\r\n]/.test(value), 'must not contain CR/LF')
+      .optional(),
+  })
+  type UploadFileInput = z.infer<typeof uploadFileInputSchema>
+
+  const uploadFile = defineTool<UploadFileInput>({
+    name: 'uploadFile',
+    description: 'ファイルをprojectにアップロードして埋め込みURLを取得する',
+    scope: 'cosense:write',
+    destructive: false,
+    inputSchema: uploadFileInputSchema,
+    fileInput: (input) => ({
+      fileName: input.fileName,
+      bytes: Buffer.from(input.data, 'base64'),
+    }),
+    build: (input, filePath) => {
+      if (filePath === undefined) {
+        throw new Error('uploadFile requires an input path')
+      }
+      return {
+        command: 'uploadFile',
+        args: [
+          input.projectUrl,
+          filePath,
+          ...(input.contentType ? ['--content-type', input.contentType] : []),
+        ],
+      }
+    },
+  })
+
+  const deleteFile = defineTool({
+    name: 'deleteFile',
+    description: 'ファイルをprojectから削除する',
+    scope: 'cosense:write',
+    destructive: true,
+    inputSchema: z.object({ fileUrl, project: projectUrl.optional() }),
+    build: (input) => ({
+      command: 'deleteFile',
+      args: [
+        input.fileUrl,
+        ...(input.project ? ['--project', input.project] : []),
+      ],
+    }),
+  })
+
+  const previewDelete = defineTool({
+    name: 'previewDelete',
+    description: 'ページ削除をdry-runしてpreviewIdを取得する',
+    scope: 'cosense:write',
+    destructive: false,
+    inputSchema: z.object({ projectUrl, pageId: pageIdSchema }),
+    build: (input) => ({
+      command: 'previewDelete',
+      args: [input.projectUrl, input.pageId],
+    }),
+  })
+
   const submitEdit = defineTool({
     name: 'submitEdit',
-    description: 'previewEditで取得したpreviewIdを使ってページ編集を確定する',
+    description:
+      'previewEdit/previewDeleteで取得したpreviewIdを使ってページ編集・削除を確定する',
     scope: 'cosense:write',
     destructive: true,
     inputSchema: z.object({ projectUrl, previewId: previewIdSchema }),
@@ -420,5 +538,13 @@ export function createToolDefinitions(env: Env): AnyToolDefinition[] {
     }),
   })
 
-  return [...readOnlyTools, previewEdit, submitEdit, replaceLinks]
+  return [
+    ...readOnlyTools,
+    uploadFile,
+    deleteFile,
+    previewEdit,
+    previewDelete,
+    submitEdit,
+    replaceLinks,
+  ]
 }

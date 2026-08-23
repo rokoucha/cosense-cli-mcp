@@ -31,6 +31,8 @@ const INVALID_PAT = 'invalid-pat'
 
 /** downloadFileの書き出し先。テストから一時ファイルの後始末を確かめるために控える。 */
 const downloadOutputPaths: string[] = []
+const uploadInputPaths: string[] = []
+const uploadedBodies: Buffer[] = []
 
 vi.mock('node:child_process', () => ({
   spawn: (
@@ -55,6 +57,25 @@ vi.mock('node:child_process', () => ({
               path: outputPath,
               contentType: 'image/png',
               size: png.length,
+            }),
+          )
+          child.stderr.end('')
+          child.emit('close', 0)
+        })
+        return
+      }
+      if (command === 'uploadFile') {
+        const inputPath = args[2] as string
+        uploadInputPaths.push(inputPath)
+        void import('node:fs/promises').then(async (fs) => {
+          uploadedBodies.push(await fs.readFile(inputPath))
+          child.stdout.end(
+            JSON.stringify({
+              embedUrl:
+                'https://scrapbox.io/files/5f151efbacbb17001a58f120.txt',
+              originalname: 'hello.txt',
+              contentType: 'text/plain',
+              size: 5,
             }),
           )
           child.stderr.end('')
@@ -457,12 +478,28 @@ describe('OAuth + MCP integration', () => {
         required: ['pageUrl'],
       },
       readPage: { properties: ['pageUrl'], required: ['pageUrl'] },
+      listPageSnapshots: {
+        properties: ['projectUrl', 'pageId'],
+        required: ['projectUrl', 'pageId'],
+      },
+      readPageSnapshot: {
+        properties: ['projectUrl', 'pageId', 'snapshotId'],
+        required: ['projectUrl', 'pageId', 'snapshotId'],
+      },
       readFileInfo: {
         properties: ['fileUrl', 'project'],
         required: ['fileUrl'],
       },
       downloadFile: {
         properties: ['fileUrl', 'project', 'thumbnail'],
+        required: ['fileUrl'],
+      },
+      uploadFile: {
+        properties: ['projectUrl', 'fileName', 'data', 'contentType'],
+        required: ['projectUrl', 'fileName', 'data'],
+      },
+      deleteFile: {
+        properties: ['fileUrl', 'project'],
         required: ['fileUrl'],
       },
       readProjectMembers: {
@@ -494,6 +531,10 @@ describe('OAuth + MCP integration', () => {
       previewEdit: {
         properties: ['mode', 'projectUrl', 'pageId', 'ops', 'body'],
         required: ['mode', 'projectUrl'],
+      },
+      previewDelete: {
+        properties: ['projectUrl', 'pageId'],
+        required: ['projectUrl', 'pageId'],
       },
       submitEdit: {
         properties: ['projectUrl', 'previewId'],
@@ -614,6 +655,33 @@ describe('OAuth + MCP integration', () => {
     expect(outputPath).toBeDefined()
     expect(existsSync(outputPath as string)).toBe(false)
     expect(existsSync(dirname(outputPath as string))).toBe(false)
+  })
+
+  it('writes upload input to a temporary file and cleans it up', async () => {
+    const accessToken = await getAccessToken('cosense:write')
+    const call = await callMcp(accessToken, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'tools/call',
+      params: {
+        name: 'uploadFile',
+        arguments: {
+          projectUrl: 'https://scrapbox.io/shokai',
+          fileName: 'hello.txt',
+          data: Buffer.from('hello').toString('base64'),
+          contentType: 'text/plain',
+        },
+      },
+    })
+
+    expect(call.status).toBe(200)
+    expect(call.json.result.isError).toBeFalsy()
+    expect(call.json.result.content[0].text).toContain('embedUrl')
+    expect(uploadedBodies.at(-1)?.toString()).toBe('hello')
+    const inputPath = uploadInputPaths.at(-1)
+    expect(inputPath).toBeDefined()
+    expect(existsSync(inputPath as string)).toBe(false)
+    expect(existsSync(dirname(inputPath as string))).toBe(false)
   })
 
   it('rejects tools/call for a write tool when only cosense:read was granted', async () => {

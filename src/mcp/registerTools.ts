@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
@@ -97,14 +97,21 @@ export function registerTools(
 
         // 結果をファイルに書くtoolには、requestごとの使い捨てdirectoryを渡す。
         // CLIは書き出し先の親directoryを作らないので、ここで用意して必ず消す。
-        const tempDir = definition.fileOutput
-          ? await mkdtemp(join(tmpdir(), 'cosense-mcp-'))
-          : undefined
-        const outputPath =
-          tempDir === undefined ? undefined : join(tempDir, 'download')
+        const inputFile = definition.fileInput?.(args)
+        const tempDir =
+          definition.fileOutput || inputFile
+            ? await mkdtemp(join(tmpdir(), 'cosense-mcp-'))
+            : undefined
+        const filePath =
+          tempDir === undefined
+            ? undefined
+            : join(tempDir, inputFile?.fileName ?? 'download')
 
         try {
-          const invocation = definition.build(args, outputPath)
+          if (inputFile && filePath) {
+            await writeFile(filePath, inputFile.bytes)
+          }
+          const invocation = definition.build(args, filePath)
           const requestId = randomUUID()
           const startedAt = process.hrtime.bigint()
           logCliCommandStarted({
@@ -160,7 +167,7 @@ export function registerTools(
           })
 
           // 一時ファイルのパスはサーバーの内部構造でしかないので、PATと同じく伏せる。
-          const secrets = outputPath === undefined ? [pat] : [pat, outputPath]
+          const secrets = filePath === undefined ? [pat] : [pat, filePath]
 
           if (result.exitCode !== 0 || result.timedOut) {
             const reason = result.timedOut
@@ -171,9 +178,9 @@ export function registerTools(
             )
           }
 
-          if (outputPath !== undefined) {
+          if (definition.fileOutput && filePath !== undefined) {
             return await fileOutputResult(
-              outputPath,
+              filePath,
               result.stdout,
               env.limits.maxImageBytes,
             )

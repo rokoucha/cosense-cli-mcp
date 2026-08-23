@@ -8,6 +8,7 @@ export const objectIdSchema = z
 export const pageIdSchema = objectIdSchema
 export const commitIdSchema = objectIdSchema
 export const lineIdSchema = objectIdSchema
+export const snapshotIdSchema = objectIdSchema
 
 /** previewEditのanchorは <lineId> または特殊値 "_end"。 */
 export const insertBeforeAnchorSchema = z.union([

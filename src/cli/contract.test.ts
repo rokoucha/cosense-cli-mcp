@@ -74,6 +74,30 @@ describe('cosense-cli contract', () => {
     expect(stdout).toContain('親ディレクトリは自動作成しない')
   })
 
+  it('uploadFile usage takes project URL and file path', () => {
+    const { stdout } = runCli(['uploadFile', '--help'])
+    expect(stdout).toMatch(/cosense uploadFile <projectUrl> <filePath>/)
+    expect(stdout).toContain('--content-type')
+  })
+
+  it('page snapshot commands document their IDs', () => {
+    expect(runCli(['listPageSnapshots', '--help']).stdout).toMatch(
+      /cosense listPageSnapshots <projectUrl> <pageId>/,
+    )
+    expect(runCli(['readPageSnapshot', '--help']).stdout).toMatch(
+      /cosense readPageSnapshot <projectUrl> <pageId> <snapshotId>/,
+    )
+  })
+
+  it('delete commands document their targets', () => {
+    expect(runCli(['deleteFile', '--help']).stdout).toMatch(
+      /cosense deleteFile <fileUrl>/,
+    )
+    expect(runCli(['previewDelete', '--help']).stdout).toMatch(
+      /cosense previewDelete <projectUrl> <pageId>/,
+    )
+  })
+
   it('previewEdit usage documents --new and stdin-based ops', () => {
     const { stdout } = runCli(['previewEdit', '--help'])
     expect(stdout).toContain('--new')

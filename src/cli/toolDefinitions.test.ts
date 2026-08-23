@@ -14,9 +14,9 @@ function getDefinition(name: string) {
 }
 
 describe('createToolDefinitions', () => {
-  it('registers all 19 tools with unique names', () => {
-    expect(definitions).toHaveLength(19)
-    expect(new Set(definitions.map((d) => d.name)).size).toBe(19)
+  it('registers all 24 tools with unique names', () => {
+    expect(definitions).toHaveLength(24)
+    expect(new Set(definitions.map((d) => d.name)).size).toBe(24)
   })
 
   it('whoami builds argv from origin', () => {
@@ -131,6 +131,94 @@ describe('createToolDefinitions', () => {
     expect(() => def.build(input)).toThrow()
   })
 
+  it('builds page snapshot commands with validated IDs', () => {
+    const pageId = 'a'.repeat(24)
+    const snapshotId = 'b'.repeat(24)
+    const list = getDefinition('listPageSnapshots')
+    const read = getDefinition('readPageSnapshot')
+
+    expect(
+      list.build(
+        list.inputSchema.parse({
+          projectUrl: 'https://scrapbox.io/shokai',
+          pageId,
+        }),
+      ),
+    ).toEqual({
+      command: 'listPageSnapshots',
+      args: ['https://scrapbox.io/shokai', pageId],
+    })
+    expect(
+      read.build(
+        read.inputSchema.parse({
+          projectUrl: 'https://scrapbox.io/shokai',
+          pageId,
+          snapshotId,
+        }),
+      ),
+    ).toEqual({
+      command: 'readPageSnapshot',
+      args: ['https://scrapbox.io/shokai', pageId, snapshotId],
+    })
+  })
+
+  it('uploadFile decodes input and passes its temporary path to the CLI', () => {
+    const def = getDefinition('uploadFile')
+    const input = def.inputSchema.parse({
+      projectUrl: 'https://scrapbox.io/shokai',
+      fileName: 'hello.txt',
+      data: Buffer.from('hello').toString('base64'),
+      contentType: 'text/plain',
+    })
+    expect(def.fileInput?.(input)).toEqual({
+      fileName: 'hello.txt',
+      bytes: Buffer.from('hello'),
+    })
+    expect(def.build(input, '/tmp/upload/hello.txt')).toEqual({
+      command: 'uploadFile',
+      args: [
+        'https://scrapbox.io/shokai',
+        '/tmp/upload/hello.txt',
+        '--content-type',
+        'text/plain',
+      ],
+    })
+    expect(def.scope).toBe('cosense:write')
+    expect(def.destructive).toBe(false)
+  })
+
+  it('uploadFile rejects path-like file names and invalid base64', () => {
+    const def = getDefinition('uploadFile')
+    const base = {
+      projectUrl: 'https://scrapbox.io/shokai',
+      data: 'aGVsbG8=',
+    }
+    expect(
+      def.inputSchema.safeParse({ ...base, fileName: '../secret' }).success,
+    ).toBe(false)
+    expect(
+      def.inputSchema.safeParse({ ...base, fileName: 'file', data: '???' })
+        .success,
+    ).toBe(false)
+  })
+
+  it('deleteFile builds optional project argv and is destructive', () => {
+    const def = getDefinition('deleteFile')
+    const input = def.inputSchema.parse({
+      fileUrl: 'https://scrapbox.io/files/5f151efbacbb17001a58f120.png',
+      project: 'https://scrapbox.io/shokai',
+    })
+    expect(def.build(input)).toEqual({
+      command: 'deleteFile',
+      args: [
+        'https://scrapbox.io/files/5f151efbacbb17001a58f120.png',
+        '--project',
+        'https://scrapbox.io/shokai',
+      ],
+    })
+    expect(def.destructive).toBe(true)
+  })
+
   it('searchFullText includes --or and --sort flags', () => {
     const def = getDefinition('searchFullText')
     const input = def.inputSchema.parse({
@@ -231,6 +319,21 @@ describe('createToolDefinitions', () => {
     })
     expect(def.scope).toBe('cosense:write')
     expect(def.destructive).toBe(true)
+  })
+
+  it('previewDelete builds argv without being destructive itself', () => {
+    const def = getDefinition('previewDelete')
+    const pageId = 'a'.repeat(24)
+    const input = def.inputSchema.parse({
+      projectUrl: 'https://scrapbox.io/shokai',
+      pageId,
+    })
+    expect(def.build(input)).toEqual({
+      command: 'previewDelete',
+      args: ['https://scrapbox.io/shokai', pageId],
+    })
+    expect(def.scope).toBe('cosense:write')
+    expect(def.destructive).toBe(false)
   })
 
   it('rejects URLs outside the allowed origin at the tool boundary', () => {

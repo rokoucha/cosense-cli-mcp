@@ -26,7 +26,7 @@ const UPSTREAM_REPO = 'helpfeel/cosense-cli'
  * 変えてもCLIが据え置きの間は古い生成物が使い回され、変更が効いていないのに
  * ビルドが通ってしまう。
  */
-const GENERATOR_VERSION = 3
+const GENERATOR_VERSION = 4
 
 /** 取得するスキル。上流の `skills/cosense/` 配下のパスをdoc名にマップする。 */
 const SKILL_DOC_PATHS: Record<string, string> = {

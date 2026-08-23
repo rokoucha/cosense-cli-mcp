@@ -22,6 +22,7 @@ export const GUIDE_TOPICS: Record<string, string> = {
   'SKILL.md': `${PREAMBLE}\n---\n\n${upstreamDoc('SKILL.md')}`,
   'read-page.md': upstreamDoc('read-page.md'),
   'edit-page.md': upstreamDoc('edit-page.md'),
+  'upload-file.md': upstreamDoc('upload-file.md'),
   'login.md': LOGIN_DOC,
   'version-mismatch.md': VERSION_MISMATCH_DOC,
 }

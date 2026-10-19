@@ -140,3 +140,53 @@ describe('fileUrlSchema', () => {
     )
   })
 })
+
+describe('Cosense domain migration', () => {
+  const schemas = [
+    { create: originSchema, path: '' },
+    { create: projectUrlSchema, path: '/project' },
+    { create: pageUrlSchema, path: '/project/page#abc' },
+    { create: fileUrlSchema, path: '/files/abc.png' },
+  ]
+
+  it.each(schemas)(
+    'accepts both domains without rewriting URLs ($path)',
+    ({ create, path }) => {
+      for (const allowedHost of ['scrapbox.io', 'cosen.se']) {
+        for (const host of ['scrapbox.io', 'cosen.se']) {
+          const url = `https://${host}${path}`
+          expect(create(`https://${allowedHost}`).parse(url)).toBe(url)
+        }
+      }
+    },
+  )
+
+  it.each(schemas)(
+    'rejects lookalikes and different ports ($path)',
+    ({ create, path }) => {
+      const schema = create(ORIGIN)
+      for (const origin of [
+        'http://cosen.se',
+        'https://cosen.se:8443',
+        'https://cosen.se.',
+        'https://sub.cosen.se',
+        'https://cosen.se.evil.example',
+        'https://user:pass@cosen.se',
+      ]) {
+        expect(schema.safeParse(`${origin}${path}`).success).toBe(false)
+      }
+    },
+  )
+
+  it.each(schemas)(
+    'keeps custom origins restricted to themselves ($path)',
+    ({ create, path }) => {
+      const schema = create('https://cosense.example.com')
+      const url = `https://cosense.example.com${path}`
+      expect(schema.parse(url)).toBe(url)
+      for (const host of ['scrapbox.io', 'cosen.se']) {
+        expect(schema.safeParse(`https://${host}${path}`).success).toBe(false)
+      }
+    },
+  )
+})

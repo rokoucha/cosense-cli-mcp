@@ -16,13 +16,21 @@ function parseHttpsUrl(value: string): URL | undefined {
   return url
 }
 
+const COSENSE_HOSTS = new Set(['scrapbox.io', 'cosen.se'])
+
 function matchesAllowedOrigin(url: URL, allowedOrigin: string): boolean {
   const allowed = parseHttpsUrl(allowedOrigin)
-  return allowed !== undefined && url.origin === allowed.origin
+  return (
+    allowed !== undefined &&
+    (url.origin === allowed.origin ||
+      (url.port === allowed.port &&
+        COSENSE_HOSTS.has(url.hostname) &&
+        COSENSE_HOSTS.has(allowed.hostname)))
+  )
 }
 
 /**
- * `<allowedOrigin>` そのもの(path/query/hash無し)のみ許可する。
+ * `<allowedOrigin>` (path/query/hash無し)。scrapbox.ioとcosen.seは同一視する。
  * 例: cosense whoami <origin>
  */
 export function originSchema(allowedOrigin: string) {
@@ -34,7 +42,7 @@ export function originSchema(allowedOrigin: string) {
       if (!url || !matchesAllowedOrigin(url, allowedOrigin)) {
         ctx.addIssue({
           code: 'custom',
-          message: `origin must be exactly ${allowedOrigin}`,
+          message: `origin must match ${allowedOrigin} (scrapbox.io and cosen.se are equivalent)`,
         })
         return z.NEVER
       }
@@ -48,7 +56,7 @@ export function originSchema(allowedOrigin: string) {
       return url.origin
     })
     .describe(
-      `Cosenseのorigin。このサーバーが許可するのは ${allowedOrigin} のみ (path/query/hash不可)`,
+      `Cosenseのorigin。このサーバーが許可するのは ${allowedOrigin} (scrapbox.ioとcosen.seは同一視。path/query/hash不可)`,
     )
 }
 
@@ -85,7 +93,7 @@ export function projectUrlSchema(allowedOrigin: string) {
       return `${url.origin}${url.pathname}`
     })
     .describe(
-      `projectのURL。形式は ${allowedOrigin}/<projectName> (query/hash不可)`,
+      `projectのURL。形式は ${allowedOrigin}/<projectName> (scrapbox.ioとcosen.seは同一視。query/hash不可)`,
     )
 }
 
@@ -129,7 +137,7 @@ export function pageUrlSchema(allowedOrigin: string) {
       return `${url.origin}${url.pathname}${url.hash}`
     })
     .describe(
-      `ページのURL。形式は ${allowedOrigin}/<projectName>/<pageTitle> (末尾に #<lineId> を付けてもよい。query不可)`,
+      `ページのURL。形式は ${allowedOrigin}/<projectName>/<pageTitle> (末尾に #<lineId> を付けてもよい。scrapbox.ioとcosen.seは同一視。query不可)`,
     )
 }
 
@@ -166,6 +174,6 @@ export function fileUrlSchema(allowedOrigin: string) {
       return `${url.origin}${url.pathname}`
     })
     .describe(
-      `ファイルのURL。形式は ${allowedOrigin}/files/<fileId>[.<ext>] (query/hash不可)`,
+      `ファイルのURL。形式は ${allowedOrigin}/files/<fileId>[.<ext>] (scrapbox.ioとcosen.seは同一視。query/hash不可)`,
     )
 }

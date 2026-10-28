@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-FROM --platform=$BUILDPLATFORM node:24-slim AS base
+FROM --platform=$BUILDPLATFORM node:26-slim AS base
 WORKDIR /app
 RUN corepack enable
 
@@ -16,14 +16,14 @@ COPY src ./src
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm install --offline --frozen-lockfile && pnpm run build
 
-FROM node:24-slim AS production-deps
+FROM node:26-slim AS production-deps
 WORKDIR /app
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --prod
 
-FROM node:24-slim AS runtime
+FROM node:26-slim AS runtime
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --link --from=production-deps /app/node_modules ./node_modules

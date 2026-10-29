@@ -60,8 +60,13 @@ describe('guide topics', () => {
     expect(skill).toContain('Cosense Skill 手順書')
   })
 
-  it('serves the skill entry point as server instructions', () => {
-    expect(buildInstructions()).toBe(guideTopic('SKILL.md'))
+  it('keeps instructions short and points to the fallback without duplicate loading', () => {
+    const instructions = buildInstructions()
+    expect(instructions.length).toBeLessThan(500)
+    expect(instructions).toContain('guide({ topic: "SKILL.md" })')
+    expect(instructions).toContain('読込済みならguideで重ねて読まない')
+    expect(instructions).not.toContain('Cosense Skill 手順書')
+    expect(guideTopic('SKILL.md')).toContain('Cosense Skill 手順書')
   })
 })
 

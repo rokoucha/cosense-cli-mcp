@@ -2,7 +2,7 @@
 
 FROM --platform=$BUILDPLATFORM node:26-slim AS base
 WORKDIR /app
-RUN corepack enable
+RUN npm install --global corepack@0.36.0 && corepack enable
 
 FROM base AS fetch
 COPY pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -18,7 +18,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
 
 FROM node:26-slim AS production-deps
 WORKDIR /app
-RUN corepack enable
+RUN npm install --global corepack@0.36.0 && corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN --mount=type=cache,id=pnpm-store,target=/root/.local/share/pnpm/store \
     pnpm install --frozen-lockfile --prod

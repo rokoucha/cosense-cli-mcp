@@ -167,8 +167,8 @@ importers:
   .:
     dependencies:
       '@helpfeel/cosense-cli':
-        specifier: 1.17.0
-        version: 1.17.0
+        specifier: 1.17.1
+        version: 1.17.1
       '@modelcontextprotocol/sdk':
         specifier: 1.32.2
         version: 1.32.2(zod@4.6.7)
@@ -368,8 +368,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@helpfeel/cosense-cli@1.17.0':
-    resolution: {integrity: sha512-aveSqoaEkZ+IkRT4SAXsJg7Ik3NIQrMLw4uuIPo8s4S4qVTtN9927gYuM8Y/9X+cOs+ovowez7wemNxK9K7C1A==}
+  '@helpfeel/cosense-cli@1.17.1':
+    resolution: {integrity: sha512-06+NxlNh0Kzk+m7erdmfWAH7KdNKO2pxcEgXu/pw0IaZHwFOivgGtAuogRK1rv3sQXeQHlqdfwAnFVjLkRyI3A==}
     engines: {node: '>=24'}
     hasBin: true
 
@@ -1414,7 +1414,7 @@ snapshots:
   '@esbuild/win32-x64@0.28.1':
     optional: true
 
-  '@helpfeel/cosense-cli@1.17.0':
+  '@helpfeel/cosense-cli@1.17.1':
     dependencies:
       tsx: 4.23.15
 

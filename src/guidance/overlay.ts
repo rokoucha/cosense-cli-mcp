@@ -22,7 +22,8 @@ export const PREAMBLE = `# このサーバー (cosense-cli-mcp) について
 - \`cosense <command> --help\` は \`help({ command })\` で読める。スキルが「使う前にhelpを読め」と
   指示している箇所では、このtoolを使う
 - スキル中の相対リンク (例: \`[read-page.md](read-page.md)\`) は、そのファイル名をそのまま
-  \`guide({ topic: "read-page.md" })\` に渡せば読める
+  \`guide({ topic: "read-page.md" })\` に渡せば読める。ホストが同じ文書を提供している場合は
+  ホストのスキル読込機能を使い、読込済みの文書はguideで重ねて読まない
 - スキルのコマンド一覧表には、このサーバーが公開していないコマンドも載っている。
   実際に使えるものはtool一覧が正
 - shellでのクォート、stdinへのpipe、\`--input-file\` に関する記述は、tool呼び出しには

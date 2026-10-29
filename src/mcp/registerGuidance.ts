@@ -20,7 +20,7 @@ export function registerGuidance(server: McpServer): void {
     'guide',
     {
       description:
-        'Cosenseを読み書きするためのスキルを読む。tool呼び出しの前に、対応するスキルを読む',
+        'Cosenseスキルをホスト経由で読めない場合の互換ガイド。最初にSKILL.mdを読む。ホストが読込済みの文書は再取得しない',
       inputSchema: z.object({
         topic: z
           .enum(GUIDE_TOPIC_NAMES)

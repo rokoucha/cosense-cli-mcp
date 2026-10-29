@@ -715,7 +715,7 @@ describe('OAuth + MCP integration', () => {
     expect(call.json.result.content[0].text).toContain('forbidden')
   })
 
-  it('serves the skill entry point as initialize instructions', async () => {
+  it('serves concise guidance as initialize instructions', async () => {
     const accessToken = await getAccessToken('cosense:read')
 
     const init = await callMcp(accessToken, {
@@ -730,7 +730,11 @@ describe('OAuth + MCP integration', () => {
     })
     expect(init.status).toBe(200)
     expect(init.json.result.instructions).toContain('cosense-cli-mcp')
-    expect(init.json.result.instructions).toContain('Cosense Skill 手順書')
+    expect(init.json.result.instructions).toContain(
+      'guide({ topic: "SKILL.md" })',
+    )
+    expect(init.json.result.instructions.length).toBeLessThan(500)
+    expect(init.json.result.instructions).not.toContain('Cosense Skill 手順書')
   })
 
   /**

@@ -31,6 +31,8 @@ import {
 import { computeS256Challenge } from './pkce.js'
 import { ALL_SCOPES } from './scopes.js'
 
+import { registerClient, registrationSchema } from './registration.js'
+
 const CSRF_COOKIE_NAME = 'cosense_mcp_csrf'
 
 function classifyCliFailure(
@@ -172,6 +174,31 @@ export function createOAuthRouter(env: Env, executor: CliExecutor): Router {
       .json(buildAuthorizationServerMetadata(env))
   })
 
+  router.post(
+    '/register',
+    express.json({ limit: '32kb' }),
+    async (req, res, next) => {
+      res.set('Cache-Control', 'no-store').set('Pragma', 'no-cache')
+      const result = registrationSchema.safeParse(req.body)
+      if (!result.success) {
+        const invalidRedirect = result.error.issues.some(
+          (issue) => issue.path[0] === 'redirect_uris',
+        )
+        res.status(400).json({
+          error: invalidRedirect
+            ? 'invalid_redirect_uri'
+            : 'invalid_client_metadata',
+        })
+        return
+      }
+      try {
+        res.status(201).json(await registerClient(env, result.data))
+      } catch (error) {
+        next(error)
+      }
+    },
+  )
+
   router.get('/authorize', async (req, res, next) => {
     try {
       const query = req.query
@@ -206,7 +233,7 @@ export function createOAuthRouter(env: Env, executor: CliExecutor): Router {
           .send('invalid_request: client_id is required')
         return
       }
-      const client = findClient(env, clientId)
+      const client = await findClient(env, clientId)
       if (!client) {
         res
           .status(400)
@@ -464,9 +491,18 @@ export function createOAuthRouter(env: Env, executor: CliExecutor): Router {
           })
           return
         }
-        const client = findClient(env, clientId)
+        const client = await findClient(env, clientId)
         if (!client || !verifyClientSecret(client, clientSecret)) {
           res.status(401).json({ error: 'invalid_client' })
+          return
+        }
+
+        if (
+          grantType &&
+          client.grantTypes &&
+          !client.grantTypes.includes(grantType)
+        ) {
+          res.status(400).json({ error: 'unauthorized_client' })
           return
         }
 
@@ -615,6 +651,26 @@ export function createOAuthRouter(env: Env, executor: CliExecutor): Router {
       } catch (error) {
         next(error)
       }
+    },
+  )
+
+  router.use(
+    '/register',
+    (
+      error: unknown,
+      _req: Request,
+      res: Response,
+      next: import('express').NextFunction,
+    ) => {
+      const status = (error as { status?: number } | null)?.status
+      if (status === 400 || status === 413 || status === 415) {
+        res
+          .status(status)
+          .set('Cache-Control', 'no-store')
+          .json({ error: 'invalid_client_metadata' })
+        return
+      }
+      next(error)
     },
   )
 

@@ -13,6 +13,7 @@ export interface ProtectedResourceMetadata {
 export interface AuthorizationServerMetadata {
   issuer: string
   authorization_endpoint: string
+  registration_endpoint: string
   token_endpoint: string
   response_types_supported: string[]
   grant_types_supported: string[]
@@ -44,6 +45,7 @@ export function buildAuthorizationServerMetadata(
   return {
     issuer: env.issuer,
     authorization_endpoint: new URL('/authorize', env.issuer).toString(),
+    registration_endpoint: new URL('/register', env.issuer).toString(),
     token_endpoint: new URL('/token', env.issuer).toString(),
     response_types_supported: ['code'],
     grant_types_supported: ['authorization_code', 'refresh_token'],

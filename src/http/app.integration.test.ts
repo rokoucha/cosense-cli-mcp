@@ -59,7 +59,7 @@ vi.mock('node:child_process', () => ({
               size: png.length,
             }),
           )
-          child.stderr.end('')
+          child.stderr.end(`download warning: ${outputPath} ${VALID_PAT}`)
           child.emit('close', 0)
         })
         return
@@ -107,6 +107,12 @@ vi.mock('node:child_process', () => ({
       if (command === 'browsePage') {
         child.stdout.end('# Test Page\n\n## 本文\nhello world')
         child.stderr.end('')
+        child.emit('close', 0)
+        return
+      }
+      if (command === 'browseRelatedPages') {
+        child.stdout.end('# Related Pages\n\n## 1 hop link\nExample')
+        child.stderr.end(`文芸的データベースを出力できません ${VALID_PAT}`)
         child.emit('close', 0)
         return
       }
@@ -470,7 +476,7 @@ describe('OAuth + MCP integration', () => {
       listProjects: { properties: ['origin'], required: ['origin'] },
       browsePage: { properties: ['pageUrl'], required: ['pageUrl'] },
       browsePageChanges: {
-        properties: ['projectUrl', 'pageId', 'since'],
+        properties: ['projectUrl', 'pageId', 'since', 'before', 'all'],
         required: ['projectUrl', 'pageId'],
       },
       browseRelatedPages: {
@@ -603,7 +609,7 @@ describe('OAuth + MCP integration', () => {
       method: 'tools/call',
       params: {
         name: 'browsePage',
-        arguments: { pageUrl: 'https://scrapbox.io/shokai/foo' },
+        arguments: { pageUrl: 'https://scrapbox.io/shokai/foo/bar' },
       },
     })
     expect(call.status).toBe(200)
@@ -646,6 +652,7 @@ describe('OAuth + MCP integration', () => {
     expect(call.json.result.structuredContent.text).toBe(summary.text)
     // サーバー側の一時ファイルのパスはクライアントに渡さない
     expect(summary.text).not.toContain('cosense-mcp-')
+    expect(summary.text).toContain('download warning: [REDACTED] [REDACTED]')
     expect(image).toMatchObject({ type: 'image', mimeType: 'image/png' })
     expect(Buffer.from(image.data, 'base64').subarray(0, 8)).toEqual(
       Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
@@ -655,6 +662,25 @@ describe('OAuth + MCP integration', () => {
     expect(outputPath).toBeDefined()
     expect(existsSync(outputPath as string)).toBe(false)
     expect(existsSync(dirname(outputPath as string))).toBe(false)
+  })
+
+  it('preserves partial-result warnings from a successful CLI command', async () => {
+    const accessToken = await getAccessToken('cosense:read')
+    const call = await callMcp(accessToken, {
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'tools/call',
+      params: {
+        name: 'browseRelatedPages',
+        arguments: { pageUrl: 'https://scrapbox.io/shokai/foo/bar' },
+      },
+    })
+    expect(call.json.result.isError).toBeFalsy()
+    const text = call.json.result.content[0].text
+    expect(text).toContain('# Related Pages')
+    expect(text).toContain('文芸的データベースを出力できません [REDACTED]')
+    expect(text).not.toContain(VALID_PAT)
+    expect(call.json.result.structuredContent.text).toBe(text)
   })
 
   it('writes upload input to a temporary file and cleans it up', async () => {

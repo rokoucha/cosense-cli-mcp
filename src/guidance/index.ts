@@ -19,6 +19,7 @@ function upstreamDoc(name: string): string {
  * 同じ名前で差し替えている。上流スキルからのリンクはそのまま新しい内容に解決される。
  */
 export const GUIDE_TOPICS: Record<string, string> = {
+  'mcp.md': PREAMBLE,
   'SKILL.md': `${PREAMBLE}\n---\n\n${upstreamDoc('SKILL.md')}`,
   'read-page.md': upstreamDoc('read-page.md'),
   'edit-page.md': upstreamDoc('edit-page.md'),
@@ -43,7 +44,7 @@ export function helpText(command: string): string | undefined {
 export function buildInstructions(): string {
   return [
     'cosense-cli-mcp: Cosenseのページを読み・調べ・編集する。',
-    '操作前に guide({ topic: "SKILL.md" }) と必要な関連文書を読む。ホストがcosenseスキルを読込済みならguideで重ねて読まない。',
+    '操作前に guide({ topic: "SKILL.md" }) と必要な関連文書を読む。ホストが同じ版のcosenseスキルを読込済みなら、代わりに guide({ topic: "mcp.md" }) でMCP固有の補足だけ読む。',
     '書込・削除はユーザーの明示指示がある時のみ。引数はtoolのinput schema、詳細は help({ command }) を参照。',
   ].join('\n')
 }

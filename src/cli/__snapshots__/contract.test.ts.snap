@@ -3,7 +3,7 @@
 exports[`cosense-cli contract > matches the reviewed usage signatures for every upstream command 1`] = `
 {
   "browsePage": "cosense browsePage <pageUrl>",
-  "browsePageChanges": "cosense browsePageChanges <projectUrl> <pageId> [--since <commitId>]",
+  "browsePageChanges": "cosense browsePageChanges <projectUrl> <pageId> [--since <commitId> | [--before <commitId>] [--all]]",
   "browseRelatedPages": "cosense browseRelatedPages <pageUrl>",
   "deleteFile": "cosense deleteFile <fileUrl> [--project <projectUrl>]",
   "downloadFile": "cosense downloadFile <fileUrl> <outputPath> [--thumbnail] [--project <projectUrl>]",

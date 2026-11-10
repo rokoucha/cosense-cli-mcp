@@ -28,6 +28,18 @@ export const PREAMBLE = `# このサーバー (cosense-cli-mcp) について
   実際に使えるものはtool一覧が正
 - shellでのクォート、stdinへのpipe、\`--input-file\` に関する記述は、tool呼び出しには
   当てはまらないので無視してよい
+- CLIのインストール・更新は不要。全コマンドはtool一覧、バージョンはこの文書の
+  CLI versionを参照する。\`npm install\` や \`cosense --version\` を実行する必要は無い
+- 認証はユーザーのPATをOAuth経由で受け取る。CLIのローカル設定・Service Accountの
+  セットアップは提供しない。\`--project\` を渡しても認証方式はPATのまま
+- \`uploadFile\` はローカルパスの代わりに \`fileName\` とBase64の \`data\` を受け取る。
+  \`downloadFile\` はPNG/JPEG/GIF/WebPを画像として返す。既定は縮小版で、原本は
+  \`thumbnail: false\`。画像以外の抽出済みテキストは \`readFileInfo\` で読む
+- 画像はtool結果に直接含まれ、保存先パスは提供しない。「保存したファイルをsubagentに
+  読ませる」手順は利用可能な画像入力・委譲機能がある場合だけ適用し、無ければ直接読む。
+  Haiku/Sonnet等のモデル名は必須条件ではなく、利用できるモデルの画像対応能力で判断する
+- Gyazo画像の取得はこのサーバーの機能外。ホストの外部URL・画像取得機能があれば使い、
+  無ければ画像を確認できなかった事を明示する
 
 スキル中でユーザーへの確認 (AskUserQuestion) を求めている箇所は、ユーザーに問いかける手段が
 あるならそうする。無ければスキルが規定するデフォルトを採用してそのまま進む。

@@ -120,7 +120,7 @@ export function pageUrlSchema(allowedOrigin: string) {
         })
         return z.NEVER
       }
-      if (!/^\/[^/]+\/[^/]+\/?$/.test(url.pathname)) {
+      if (!/^\/[^/]+\/(.+?)\/?$/.test(url.pathname)) {
         ctx.addIssue({
           code: 'custom',
           message: 'pageUrl must be <origin>/<projectName>/<pageTitle>',
@@ -164,7 +164,7 @@ export function fileUrlSchema(allowedOrigin: string) {
         })
         return z.NEVER
       }
-      if (!/^\/files\/[A-Za-z0-9]+(\.[A-Za-z0-9]+)?$/.test(url.pathname)) {
+      if (!/^\/files\/[0-9a-f]{24}(?:\..*)?$/.test(url.pathname)) {
         ctx.addIssue({
           code: 'custom',
           message: 'fileUrl must be <origin>/files/<fileId>[.<ext>]',

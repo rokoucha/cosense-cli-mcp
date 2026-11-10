@@ -213,6 +213,93 @@ describe('OAuth + MCP integration', () => {
     expect(asmBody.code_challenge_methods_supported).toEqual(['S256'])
   })
 
+  it('registers a client and completes PKCE authorization and refresh', async () => {
+    const response = await fetch(`${baseUrl}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        redirect_uris: [redirectUri],
+        token_endpoint_auth_method: 'none',
+        grant_types: ['authorization_code', 'refresh_token'],
+      }),
+    })
+    expect(response.status).toBe(201)
+    const { client_id } = (await response.json()) as { client_id: string }
+    const verifier = 'a'.repeat(43)
+    const query = new URLSearchParams({
+      client_id,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'cosense:read offline_access',
+      code_challenge: computeS256Challenge(verifier),
+      code_challenge_method: 'S256',
+    })
+    const start = await fetch(`${baseUrl}/authorize?${query}`)
+    expect(start.status).toBe(200)
+    const html = await start.text()
+    const consent = await fetch(`${baseUrl}/authorize`, {
+      method: 'POST',
+      redirect: 'manual',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Cookie: extractCsrfCookie(start.headers.get('set-cookie')),
+      },
+      body: new URLSearchParams({
+        request_token: extractHiddenInput(html, 'request_token'),
+        csrf_token: extractHiddenInput(html, 'csrf_token'),
+        pat: VALID_PAT,
+      }),
+    })
+    expect(consent.status).toBe(302)
+    const code = new URL(consent.headers.get('location')!).searchParams.get(
+      'code',
+    )!
+    const token = await fetch(`${baseUrl}/token`, {
+      method: 'POST',
+      body: new URLSearchParams({
+        grant_type: 'authorization_code',
+        client_id,
+        code,
+        redirect_uri: redirectUri,
+        code_verifier: verifier,
+      }),
+    })
+    expect(token.status).toBe(200)
+    const tokens = (await token.json()) as { refresh_token: string }
+    const refresh = await fetch(`${baseUrl}/token`, {
+      method: 'POST',
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        client_id,
+        refresh_token: tokens.refresh_token,
+      }),
+    })
+    expect(refresh.status).toBe(200)
+  })
+
+  it('returns registration protocol errors', async () => {
+    for (const body of [
+      '{}',
+      '{',
+      JSON.stringify({ redirect_uris: ['http://unsafe.example/cb'] }),
+    ]) {
+      const response = await fetch(`${baseUrl}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body,
+      })
+      expect(response.status).toBe(400)
+      expect(await response.json()).toHaveProperty('error')
+    }
+    const response = await fetch(
+      `${baseUrl}/.well-known/oauth-authorization-server`,
+    )
+    expect(await response.json()).toHaveProperty(
+      'registration_endpoint',
+      `${baseUrl}/register`,
+    )
+  })
+
   async function startAuthorize(
     scope: string,
     state: string,

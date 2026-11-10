@@ -59,3 +59,29 @@ MCPでの違い:
 Copyright (c) 2026 Rokoucha
 
 Released under the MIT license, see LICENSE.
+
+## 動的クライアント登録
+
+`/.well-known/oauth-authorization-server` の `registration_endpoint` で公開する
+`POST /register` にJSONを送るとクライアントを登録できます。事前登録の
+`OAUTH_CLIENTS_JSON` は任意で、引き続き利用できます。
+
+```json
+{
+  "client_name": "My MCP client",
+  "redirect_uris": ["https://client.example.com/callback"],
+  "token_endpoint_auth_method": "none",
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"]
+}
+```
+
+認証方式は `none` と `client_secret_post`（省略時）に対応します。
+後者では登録応答の `client_secret` を `/token` に送ります。
+認可にはどちらもPKCE S256が必須です。redirect URIはHTTPS、またはローカル開発用の
+HTTP loopback URLを登録し、認可時は完全一致で検証します。
+
+登録情報は署名付きclient IDに保持するため、DBや永続ボリュームは不要です。
+署名には `JWE_KEYS_REFRESH_TOKEN` から用途別に導出した鍵を使います。
+全インスタンスで同じ鍵と `ISSUER` を設定してください。登録時の鍵を削除すると、
+その鍵で登録したクライアントは再登録が必要です。個別の登録更新・削除には対応しません。

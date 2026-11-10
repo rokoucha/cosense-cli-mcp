@@ -1,11 +1,15 @@
 import { timingSafeEqual } from 'node:crypto'
 import type { Env, OAuthClientConfig } from '../config/env.js'
+import { findRegisteredClient } from './registration.js'
 
-export function findClient(
+export async function findClient(
   env: Env,
   clientId: string,
-): OAuthClientConfig | undefined {
-  return env.oauth.clients.find((client) => client.id === clientId)
+): Promise<OAuthClientConfig | undefined> {
+  return (
+    env.oauth.clients.find((client) => client.id === clientId) ??
+    findRegisteredClient(env, clientId)
+  )
 }
 
 export function isRedirectUriAllowed(

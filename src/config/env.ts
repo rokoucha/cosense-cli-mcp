@@ -16,6 +16,7 @@ export interface OAuthClientConfig {
   id: string
   secret?: string
   redirectUris: string[]
+  grantTypes?: string[]
 }
 
 export interface Env {

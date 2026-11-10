@@ -92,6 +92,14 @@ describe('pageUrlSchema', () => {
     )
   })
 
+  it.each(['foo/bar', 'foo%2Fbar', '日本語/foo'])(
+    'accepts a title containing slashes: %s',
+    (title) => {
+      const url = new URL(`https://scrapbox.io/shokai/${title}`).href
+      expect(schema.parse(url)).toBe(url)
+    },
+  )
+
   it('rejects query strings', () => {
     expect(schema.safeParse('https://scrapbox.io/shokai/foo?x=1').success).toBe(
       false,
@@ -139,6 +147,18 @@ describe('fileUrlSchema', () => {
       false,
     )
   })
+
+  it.each(['abc', 'g'.repeat(24), 'a'.repeat(23)])(
+    'rejects an invalid file ID: %s',
+    (id) => {
+      expect(schema.safeParse(`${ORIGIN}/files/${id}.png`).success).toBe(false)
+    },
+  )
+
+  it('accepts file suffixes supported by the CLI', () => {
+    const url = `${ORIGIN}/files/${'a'.repeat(24)}.tar.gz`
+    expect(schema.parse(url)).toBe(url)
+  })
 })
 
 describe('Cosense domain migration', () => {
@@ -146,7 +166,7 @@ describe('Cosense domain migration', () => {
     { create: originSchema, path: '' },
     { create: projectUrlSchema, path: '/project' },
     { create: pageUrlSchema, path: '/project/page#abc' },
-    { create: fileUrlSchema, path: '/files/abc.png' },
+    { create: fileUrlSchema, path: `/files/${'a'.repeat(24)}.png` },
   ]
 
   it.each(schemas)(

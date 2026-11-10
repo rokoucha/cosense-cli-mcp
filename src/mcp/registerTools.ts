@@ -40,15 +40,17 @@ async function fileOutputResult(
   outputPath: string,
   stdout: string,
   maxImageBytes: number,
+  notes: string[],
 ): Promise<CallToolResult> {
   const summary = summarizeDownloadStdout(stdout)
   const image = await readImageOutput(outputPath, maxImageBytes)
   if (image.kind === 'rejected') {
-    return errorResult([...summary, image.reason].join('\n'))
+    return errorResult([...summary, image.reason, ...notes].join('\n'))
   }
   const text = [
     ...summary,
     `画像を添付しました (${image.mimeType}, ${image.bytes} bytes)`,
+    ...notes,
   ].join('\n')
   return {
     structuredContent: { text },
@@ -178,17 +180,25 @@ export function registerTools(
             )
           }
 
+          const notes: string[] = []
+          if (result.stdoutTruncated) {
+            notes.push('[stdout truncated: output exceeded size limit]')
+          }
+          if (result.stderr !== '') {
+            notes.push(
+              `[CLI warning]\n${rewriteCliGuidance(redact(result.stderr, secrets))}`,
+            )
+          }
+          if (result.stderrTruncated) {
+            notes.push('[stderr truncated: output exceeded size limit]')
+          }
           if (definition.fileOutput && filePath !== undefined) {
             return await fileOutputResult(
               filePath,
               result.stdout,
               env.limits.maxImageBytes,
+              notes,
             )
-          }
-
-          const notes: string[] = []
-          if (result.stdoutTruncated) {
-            notes.push('[stdout truncated: output exceeded size limit]')
           }
           const text =
             notes.length > 0

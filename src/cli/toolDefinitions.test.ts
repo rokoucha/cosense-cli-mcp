@@ -54,6 +54,43 @@ describe('createToolDefinitions', () => {
     })
   })
 
+  it.each([
+    [{ before: 'b'.repeat(24) }, ['--before', 'b'.repeat(24)]],
+    [{ all: true }, ['--all']],
+    [
+      { before: 'b'.repeat(24), all: true },
+      ['--before', 'b'.repeat(24), '--all'],
+    ],
+    [{ since: 'b'.repeat(24), all: false }, ['--since', 'b'.repeat(24)]],
+  ])('browsePageChanges supports history options %j', (options, flags) => {
+    const def = getDefinition('browsePageChanges')
+    const input = def.inputSchema.parse({
+      projectUrl: 'https://scrapbox.io/shokai',
+      pageId: 'a'.repeat(24),
+      ...options,
+    })
+    expect(def.build(input).args).toEqual([
+      'https://scrapbox.io/shokai',
+      'a'.repeat(24),
+      ...flags,
+    ])
+  })
+
+  it.each([
+    { since: 'b'.repeat(24), before: 'c'.repeat(24) },
+    { since: 'b'.repeat(24), all: true },
+    { before: 'invalid' },
+  ])('browsePageChanges rejects invalid history options %j', (options) => {
+    const def = getDefinition('browsePageChanges')
+    expect(
+      def.inputSchema.safeParse({
+        projectUrl: 'https://scrapbox.io/shokai',
+        pageId: 'a'.repeat(24),
+        ...options,
+      }).success,
+    ).toBe(false)
+  })
+
   it('listPages builds argv for all optional flags', () => {
     const def = getDefinition('listPages')
     const input = def.inputSchema.parse({

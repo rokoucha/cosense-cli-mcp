@@ -1,8 +1,11 @@
 import { execFileSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
+import type { z } from 'zod'
+import { buildTestEnv } from '../test/envFixture.js'
 import { ALLOWED_COMMANDS } from './executor.js'
 import { resolveCosenseBin } from './resolveBin.js'
+import { createToolDefinitions } from './toolDefinitions.js'
 
 /**
  * `@helpfeel/cosense-cli` はexact versionのdependencyとして固定している。
@@ -65,6 +68,35 @@ describe('cosense-cli contract', () => {
       [...ALLOWED_COMMANDS, ...CLI_ONLY_COMMANDS].sort(),
     )
   })
+
+  it('publishes every allowed command as an MCP tool', () => {
+    expect(
+      createToolDefinitions(buildTestEnv())
+        .map((tool) => tool.name)
+        .sort(),
+    ).toEqual([...ALLOWED_COMMANDS].sort())
+  })
+
+  it('accounts for every documented CLI option in the MCP inputs', () => {
+    for (const tool of createToolDefinitions(buildTestEnv())) {
+      const { stdout, status } = runCli([tool.name, '--help'])
+      expect(status, tool.name).toBe(0)
+      const fields = Object.keys((tool.inputSchema as z.ZodObject).shape)
+      const flags = new Set(stdout.match(/--[a-z]+(?:-[a-z]+)*/g) ?? [])
+      for (const flag of flags) {
+        if (flag === '--help') continue
+        // MCPは入力をJSONで受け取り、CLIへstdinで渡す。
+        if (tool.name === 'previewEdit' && flag === '--input-file') continue
+        const field =
+          tool.name === 'previewEdit' && flag === '--new'
+            ? 'mode'
+            : flag
+                .slice(2)
+                .replace(/-([a-z])/g, (_, c: string) => c.toUpperCase())
+        expect(fields, `${tool.name} ${flag}`).toContain(field)
+      }
+    }
+  }, 30_000)
 
   /**
    * 上流CLIの引数・option変更をRenovate PRのCIで検出する。

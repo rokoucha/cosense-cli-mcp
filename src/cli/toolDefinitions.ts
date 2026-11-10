@@ -2,6 +2,7 @@ import { z } from 'zod'
 import type { Env } from '../config/env.js'
 import {
   editTextSchema,
+  commitIdSchema,
   filterNameSchema,
   fullTextSearchSortSchema,
   insertBeforeAnchorSchema,
@@ -144,20 +145,31 @@ export function createToolDefinitions(env: Env): AnyToolDefinition[] {
     defineTool({
       name: 'browsePageChanges',
       description:
-        'ページの編集履歴(commit)をpageId起点で取得し、変更を自然言語で説明する',
+        'ページの編集履歴を自然言語で説明する。既定は最新から最大100件。beforeで以前の続き、allで保持中の全履歴、sinceで指定commitより後を取得する',
       scope: 'cosense:read',
       destructive: false,
-      inputSchema: z.object({
-        projectUrl,
-        pageId: pageIdSchema,
-        since: lineIdSchema.optional(),
-      }),
+      inputSchema: z
+        .object({
+          projectUrl,
+          pageId: pageIdSchema,
+          since: commitIdSchema.optional(),
+          before: commitIdSchema.optional(),
+          all: z.boolean().optional(),
+        })
+        .refine(
+          (input) =>
+            input.since === undefined ||
+            (input.before === undefined && !input.all),
+          { message: 'since cannot be used with before or all' },
+        ),
       build: (input) => ({
         command: 'browsePageChanges',
         args: [
           input.projectUrl,
           input.pageId,
           ...(input.since ? ['--since', input.since] : []),
+          ...(input.before ? ['--before', input.before] : []),
+          ...(input.all ? ['--all'] : []),
         ],
       }),
     }),

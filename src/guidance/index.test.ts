@@ -64,9 +64,20 @@ describe('guide topics', () => {
     const instructions = buildInstructions()
     expect(instructions.length).toBeLessThan(500)
     expect(instructions).toContain('guide({ topic: "SKILL.md" })')
-    expect(instructions).toContain('読込済みならguideで重ねて読まない')
+    expect(instructions).toContain('同じ版のcosenseスキルを読込済みなら')
+    expect(instructions).toContain('guide({ topic: "mcp.md" })')
     expect(instructions).not.toContain('Cosense Skill 手順書')
     expect(guideTopic('SKILL.md')).toContain('Cosense Skill 手順書')
+  })
+
+  it('provides MCP adaptations even when the host already loaded the skill', () => {
+    const overlay = guideTopic('mcp.md') as string
+    expect(overlay).toContain('CLIのインストール・更新は不要')
+    expect(overlay).toContain('保存先パスは提供しない')
+    expect(overlay).toContain('Gyazo画像の取得はこのサーバーの機能外')
+    expect(overlay).toContain('fileName')
+    expect(overlay).toContain('OAuth')
+    expect(overlay).not.toContain('Cosense Skill 手順書')
   })
 })
 
